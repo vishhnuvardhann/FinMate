@@ -1,12 +1,34 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+FinMate – Personal Finance Manager
 
-# Run and deploy your AI Studio app
+FinMate is a modern personal finance tracking application built with React + TypeScript + Firebase.
 
-This contains everything you need to run your app locally.
+⭐ Features
 
-View your app in AI Studio: https://ai.studio/apps/drive/1nfE9NDukDz7cy0yrlunW4nRinQXHO6ug
+📊 Dashboard with net worth, assets, liabilities & spending trends
+
+💰 Budgeting
+
+📘 Balance Sheet
+
+📈 Financial Forecasting
+
+🧾 Bills & EMI Tracking
+
+📑 Reports
+
+🔐 Secure Google Login + Email Login
+
+☁️ Cloud Sync (Firestore)
+
+🛠️ Tech Stack
+
+Frontend: React + TypeScript + Vite
+
+Backend: Firebase Authentication & Firestore
+
+Hosting: Vercel / Firebase Hosting
+
+Styling: TailwindCSS
 
 ## Run Locally
 
