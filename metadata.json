@@ -1,0 +1,5 @@
+{
+  "name": "FinMate",
+  "description": "A comprehensive personal finance management application featuring net worth tracking, budgeting, forecasting, and expense monitoring with a modern glassmorphic UI.",
+  "requestFramePermissions": []
+}
