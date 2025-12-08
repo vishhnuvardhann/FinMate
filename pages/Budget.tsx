@@ -28,8 +28,14 @@ const Budget: React.FC = () => {
     if (!data) return;
     
     const formData = new FormData(e.currentTarget);
-    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
-    
+
+    // 🔴 CHANGE #1 — get selected date
+    const selectedDate = formData.get('date') as string;
+
+    // if no date chosen, fallback to today's date
+    const finalDate = selectedDate ? selectedDate : 
+      `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
+
     const newItem: FinancialItem = {
       id: Date.now().toString(),
       userId: data.userId,
@@ -38,7 +44,10 @@ const Budget: React.FC = () => {
       category: activeTab,
       subcategory: formData.get('subcategory') as string,
       icon: activeTab === 'income' ? 'ri-money-dollar-circle-line' : 'ri-shopping-bag-line',
-      date: dateStr,
+
+      // 🔴 CHANGE #2 — save the selected date
+      date: finalDate,
+
       recurring: formData.get('recurring') === 'on'
     };
 
@@ -49,7 +58,7 @@ const Budget: React.FC = () => {
       updatedData.expenses.push(newItem);
     }
 
-    setData(updatedData); // Optimistic update
+    setData(updatedData);
     await DataService.save(updatedData);
     (e.target as HTMLFormElement).reset();
   };
@@ -62,7 +71,7 @@ const Budget: React.FC = () => {
     } else {
       updatedData.expenses = updatedData.expenses.filter(i => i.id !== id);
     }
-    setData(updatedData); // Optimistic update
+    setData(updatedData);
     await DataService.save(updatedData);
   };
 
@@ -74,8 +83,7 @@ const Budget: React.FC = () => {
 
   if (!data) return null;
 
-  // Filter Data by Month
-  const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+  const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2,'0')}`;
   
   const filteredIncome = data.income.filter(i => i.date.startsWith(currentMonthStr));
   const filteredExpenses = data.expenses.filter(i => i.date.startsWith(currentMonthStr));
@@ -96,7 +104,6 @@ const Budget: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
          <h2 className="text-3xl font-bold text-white">Budget Worksheet</h2>
          
-         {/* Month Navigation */}
          <div className="flex items-center gap-4 bg-white/5 rounded-xl p-2 border border-white/10">
             <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-white/10 rounded-lg transition text-gray-300 hover:text-white">
               <i className="ri-arrow-left-s-line text-xl"></i>
@@ -113,11 +120,11 @@ const Budget: React.FC = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-emerald-900/20 border-emerald-500/20">
-          <p className="text-emerald-400 text-sm font-medium uppercase">Income ({currentDate.toLocaleDateString('default', {month:'short'})})</p>
+          <p className="text-emerald-400 text-sm font-medium uppercase">Income ({currentDate.toLocaleDateString('default',{month:'short'})})</p>
           <h3 className="text-2xl font-bold text-white mt-1">{formatCurrency(totalIncome)}</h3>
         </Card>
         <Card className="bg-rose-900/20 border-rose-500/20">
-          <p className="text-rose-400 text-sm font-medium uppercase">Expenses ({currentDate.toLocaleDateString('default', {month:'short'})})</p>
+          <p className="text-rose-400 text-sm font-medium uppercase">Expenses ({currentDate.toLocaleDateString('default',{month:'short'})})</p>
           <h3 className="text-2xl font-bold text-white mt-1">{formatCurrency(totalExpense)}</h3>
         </Card>
         <Card className="bg-blue-900/20 border-blue-500/20">
@@ -129,6 +136,7 @@ const Budget: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Form */}
         <Card title={`Add ${activeTab === 'income' ? 'Income' : 'Expense'}`} className="h-fit">
+
           <div className="flex gap-2 p-1 bg-white/5 rounded-lg mb-6">
             <button 
               onClick={() => setActiveTab('expense')}
@@ -145,18 +153,31 @@ const Budget: React.FC = () => {
           </div>
 
           <form onSubmit={handleAddItem} className="space-y-4">
+
+            {/* 🔴 CHANGE #3 — Date input added */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1">Date</label>
+              <input 
+                type="date"
+                name="date"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1">Description</label>
               <input name="name" required className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500 transition" placeholder="e.g. Salary, Rent..." />
             </div>
+
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1">Amount (₹)</label>
               <input name="amount" type="number" step="0.01" required className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500 transition" placeholder="0.00" />
             </div>
+
             {activeTab === 'expense' && (
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1">Category</label>
-                <select name="subcategory" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500 transition">
+                <select name="subcategory" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white">
                   <option className="bg-slate-800" value="Housing">Housing</option>
                   <option className="bg-slate-800" value="Food">Food</option>
                   <option className="bg-slate-800" value="Utilities">Utilities</option>
@@ -167,7 +188,7 @@ const Budget: React.FC = () => {
                 </select>
               </div>
             )}
-            
+
             <div className="flex items-center gap-2">
               <input type="checkbox" name="recurring" id="recurring" className="w-4 h-4 rounded border-gray-600 bg-white/5 text-indigo-600 focus:ring-indigo-500" />
               <label htmlFor="recurring" className="text-sm text-gray-300">Recurring (Auto-add next month)</label>
@@ -176,6 +197,7 @@ const Budget: React.FC = () => {
             <button type="submit" className={`w-full py-2 rounded-lg font-medium text-white shadow-lg transition transform hover:scale-[1.02] ${activeTab === 'income' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-indigo-600 hover:bg-indigo-500'}`}>
               Add to {currentDate.toLocaleDateString('default', { month: 'long' })}
             </button>
+
           </form>
         </Card>
 
@@ -183,7 +205,7 @@ const Budget: React.FC = () => {
         <Card className="lg:col-span-2">
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
              <h3 className="text-lg font-semibold text-white">{activeTab === 'income' ? 'Income Sources' : 'Expenses'}</h3>
-             
+
              <div className="flex gap-2 w-full md:w-auto">
                <div className="relative flex-1 md:w-48">
                  <i className="ri-search-line absolute left-3 top-2.5 text-gray-500"></i>
@@ -192,14 +214,15 @@ const Budget: React.FC = () => {
                     placeholder="Search..." 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white"
                  />
                </div>
+
                {activeTab === 'expense' && (
                  <select 
                     value={categoryFilter}
                     onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
                  >
                     <option className="bg-slate-800" value="All">All Categories</option>
                     <option className="bg-slate-800" value="Housing">Housing</option>
@@ -215,12 +238,19 @@ const Budget: React.FC = () => {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-white/10 text-gray-400 text-sm">
+
                   <th className="pb-3 font-medium">Description</th>
+
+                  {/* 🔴 CHANGE #4 — Add Date column */}
+                  <th className="pb-3 font-medium">Date</th>
+
                   {activeTab === 'expense' && <th className="pb-3 font-medium">Category</th>}
+                  
                   <th className="pb-3 font-medium text-right">Amount</th>
                   <th className="pb-3 font-medium text-right">Action</th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-white/5">
                 {displayedItems.map((item) => (
                   <tr key={item.id} className="group hover:bg-white/5 transition">
@@ -235,27 +265,35 @@ const Budget: React.FC = () => {
                         </div>
                       </div>
                     </td>
+
+                    {/* 🔴 CHANGE #5 — Show date */}
+                    <td className="py-4 text-gray-300 text-sm">{item.date}</td>
+
                     {activeTab === 'expense' && (
                       <td className="py-4 text-gray-400 text-sm">
                         <span className="px-2 py-1 rounded bg-white/5 border border-white/5">{item.subcategory}</span>
                       </td>
                     )}
+
                     <td className="py-4 text-right font-medium text-white">{formatCurrency(item.amount)}</td>
+
                     <td className="py-4 text-right">
                       <button onClick={() => handleDelete(item.id, activeTab)} className="text-gray-500 hover:text-red-400 transition p-2">
                         <i className="ri-delete-bin-line"></i>
                       </button>
                     </td>
+
                   </tr>
                 ))}
                 {displayedItems.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="py-8 text-center text-gray-500 italic">
+                    <td colSpan={5} className="py-8 text-center text-gray-500 italic">
                       No items found for this month.
                     </td>
                   </tr>
                 )}
               </tbody>
+
             </table>
           </div>
         </Card>
