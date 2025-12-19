@@ -94,7 +94,6 @@ const Reports: React.FC = () => {
     doc.setTextColor(79, 70, 229);
     doc.text('Assets Breakdown', 14, finalY);
 
-    const autoTable = (autoTableModule as any).default || autoTableModule;
     autoTable(doc, {
       startY: finalY + 5,
       head: [['Asset Name', 'Category', 'Value']],
