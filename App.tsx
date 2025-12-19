@@ -7,7 +7,7 @@ import BudgetPlanner from './pages/BudgetPlanner';
 import BalanceSheet from './pages/BalanceSheet';
 import Forecasting from './pages/Forecasting';
 import EMI from './pages/EMI';
-import Reports from './pages/Reports';
+import Reports from './pages/ReportsV2';
 import Login from './pages/Login';
 import { AuthService } from './services/authService';
 
