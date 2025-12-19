@@ -26,15 +26,15 @@ const Budget: React.FC = () => {
   const handleAddItem = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!data) return;
-    
+
     const formData = new FormData(e.currentTarget);
 
     // 🔴 CHANGE #1 — get selected date
     const selectedDate = formData.get('date') as string;
 
     // if no date chosen, fallback to today's date
-    const finalDate = selectedDate ? selectedDate : 
-      `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
+    const finalDate = selectedDate ? selectedDate :
+      `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
 
     const newItem: FinancialItem = {
       id: Date.now().toString(),
@@ -83,8 +83,8 @@ const Budget: React.FC = () => {
 
   if (!data) return null;
 
-  const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2,'0')}`;
-  
+  const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+
   const filteredIncome = data.income.filter(i => i.date.startsWith(currentMonthStr));
   const filteredExpenses = data.expenses.filter(i => i.date.startsWith(currentMonthStr));
 
@@ -102,29 +102,29 @@ const Budget: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-         <h2 className="text-3xl font-bold text-white">Budget Worksheet</h2>
-         
-         <div className="flex items-center gap-4 bg-white/5 rounded-xl p-2 border border-white/10">
-            <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-white/10 rounded-lg transition text-gray-300 hover:text-white">
-              <i className="ri-arrow-left-s-line text-xl"></i>
-            </button>
-            <span className="text-lg font-semibold w-32 text-center text-white">
-              {currentDate.toLocaleDateString('default', { month: 'long', year: 'numeric' })}
-            </span>
-             <button onClick={() => changeMonth(1)} className="p-2 hover:bg-white/10 rounded-lg transition text-gray-300 hover:text-white">
-              <i className="ri-arrow-right-s-line text-xl"></i>
-            </button>
-         </div>
+        <h2 className="text-3xl font-bold text-white">Budget Worksheet</h2>
+
+        <div className="flex items-center gap-4 bg-white/5 rounded-xl p-2 border border-white/10">
+          <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-white/10 rounded-lg transition text-gray-300 hover:text-white">
+            <i className="ri-arrow-left-s-line text-xl"></i>
+          </button>
+          <span className="text-lg font-semibold w-32 text-center text-white">
+            {currentDate.toLocaleDateString('default', { month: 'long', year: 'numeric' })}
+          </span>
+          <button onClick={() => changeMonth(1)} className="p-2 hover:bg-white/10 rounded-lg transition text-gray-300 hover:text-white">
+            <i className="ri-arrow-right-s-line text-xl"></i>
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-emerald-900/20 border-emerald-500/20">
-          <p className="text-emerald-400 text-sm font-medium uppercase">Income ({currentDate.toLocaleDateString('default',{month:'short'})})</p>
+          <p className="text-emerald-400 text-sm font-medium uppercase">Income ({currentDate.toLocaleDateString('default', { month: 'short' })})</p>
           <h3 className="text-2xl font-bold text-white mt-1">{formatCurrency(totalIncome)}</h3>
         </Card>
         <Card className="bg-rose-900/20 border-rose-500/20">
-          <p className="text-rose-400 text-sm font-medium uppercase">Expenses ({currentDate.toLocaleDateString('default',{month:'short'})})</p>
+          <p className="text-rose-400 text-sm font-medium uppercase">Expenses ({currentDate.toLocaleDateString('default', { month: 'short' })})</p>
           <h3 className="text-2xl font-bold text-white mt-1">{formatCurrency(totalExpense)}</h3>
         </Card>
         <Card className="bg-blue-900/20 border-blue-500/20">
@@ -138,13 +138,13 @@ const Budget: React.FC = () => {
         <Card title={`Add ${activeTab === 'income' ? 'Income' : 'Expense'}`} className="h-fit">
 
           <div className="flex gap-2 p-1 bg-white/5 rounded-lg mb-6">
-            <button 
+            <button
               onClick={() => setActiveTab('expense')}
               className={`flex-1 py-2 rounded-md text-sm font-medium transition ${activeTab === 'expense' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'}`}
             >
               Expenses
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('income')}
               className={`flex-1 py-2 rounded-md text-sm font-medium transition ${activeTab === 'income' ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white'}`}
             >
@@ -157,7 +157,7 @@ const Budget: React.FC = () => {
             {/* 🔴 CHANGE #3 — Date input added */}
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1">Date</label>
-              <input 
+              <input
                 type="date"
                 name="date"
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500"
@@ -177,15 +177,12 @@ const Budget: React.FC = () => {
             {activeTab === 'expense' && (
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1">Category</label>
-                <select name="subcategory" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white">
-                  <option className="bg-slate-800" value="Housing">Housing</option>
-                  <option className="bg-slate-800" value="Food">Food</option>
-                  <option className="bg-slate-800" value="Utilities">Utilities</option>
-                  <option className="bg-slate-800" value="Transport">Transport</option>
-                  <option className="bg-slate-800" value="Entertainment">Entertainment</option>
-                  <option className="bg-slate-800" value="Health">Health</option>
-                  <option className="bg-slate-800" value="Other">Other</option>
-                </select>
+                <input
+                  name="subcategory"
+                  required
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500 transition"
+                  placeholder="e.g. Housing, Food, etc."
+                />
               </div>
             )}
 
@@ -204,34 +201,33 @@ const Budget: React.FC = () => {
         {/* List & Filters */}
         <Card className="lg:col-span-2">
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-             <h3 className="text-lg font-semibold text-white">{activeTab === 'income' ? 'Income Sources' : 'Expenses'}</h3>
+            <h3 className="text-lg font-semibold text-white">{activeTab === 'income' ? 'Income Sources' : 'Expenses'}</h3>
 
-             <div className="flex gap-2 w-full md:w-auto">
-               <div className="relative flex-1 md:w-48">
-                 <i className="ri-search-line absolute left-3 top-2.5 text-gray-500"></i>
-                 <input 
-                    type="text" 
-                    placeholder="Search..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white"
-                 />
-               </div>
+            <div className="flex gap-2 w-full md:w-auto">
+              <div className="relative flex-1 md:w-48">
+                <i className="ri-search-line absolute left-3 top-2.5 text-gray-500"></i>
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white"
+                />
+              </div>
 
-               {activeTab === 'expense' && (
-                 <select 
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
-                 >
-                    <option className="bg-slate-800" value="All">All Categories</option>
-                    <option className="bg-slate-800" value="Housing">Housing</option>
-                    <option className="bg-slate-800" value="Food">Food</option>
-                    <option className="bg-slate-800" value="Utilities">Utilities</option>
-                    <option className="bg-slate-800" value="Transport">Transport</option>
-                 </select>
-               )}
-             </div>
+              {activeTab === 'expense' && (
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+                >
+                  <option className="bg-slate-800" value="All">All Categories</option>
+                  {Array.from(new Set(data.expenses.map(e => e.subcategory))).sort().map(cat => (
+                    <option key={cat} className="bg-slate-800" value={cat}>{cat}</option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -245,7 +241,7 @@ const Budget: React.FC = () => {
                   <th className="pb-3 font-medium">Date</th>
 
                   {activeTab === 'expense' && <th className="pb-3 font-medium">Category</th>}
-                  
+
                   <th className="pb-3 font-medium text-right">Amount</th>
                   <th className="pb-3 font-medium text-right">Action</th>
                 </tr>

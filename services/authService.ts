@@ -1,13 +1,15 @@
-
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   signOut, 
   updateProfile, 
   onAuthStateChanged,
   User as FirebaseUser
 } from 'firebase/auth';
+
 import { auth, googleProvider } from '../config/firebaseConfig';
 import { User } from '../types';
 import { DataService } from './dataService';
@@ -26,7 +28,6 @@ export const AuthService = {
       photoURL: fbUser.photoURL
     };
     
-    // Ensure user document exists
     await DataService.initUser(user.uid);
     return user;
   },
@@ -37,7 +38,6 @@ export const AuthService = {
 
     if (!fbUser) throw new Error("Signup failed");
     
-    // Update profile with name and avatar
     const photoURL = `https://ui-avatars.com/api/?name=${name}&background=4f46e5&color=fff`;
     await updateProfile(fbUser, {
       displayName: name,
@@ -51,12 +51,11 @@ export const AuthService = {
       photoURL: photoURL
     };
     
-    // Initialize empty data in Firestore
     await DataService.initUser(user.uid);
-    
     return user;
   },
 
+  // ⭐ ORIGINAL POPUP LOGIN (website)
   loginWithGoogle: async (): Promise<User> => {
     const result = await signInWithPopup(auth, googleProvider);
     const fbUser = result.user;
@@ -70,7 +69,30 @@ export const AuthService = {
       photoURL: fbUser.photoURL
     };
 
-    // Ensure user document exists (init if new user)
+    await DataService.initUser(user.uid);
+    return user;
+  },
+
+  // ⭐ NEW: Redirect login for Android WebView
+  loginWithGoogleRedirect: async (): Promise<void> => {
+    await signInWithRedirect(auth, googleProvider);
+  },
+
+  // ⭐ NEW: Handle redirect result for WebView
+  handleRedirectCallback: async (): Promise<User | null> => {
+    const result = await getRedirectResult(auth);
+    if (!result) return null;
+
+    const fbUser = result.user;
+    if (!fbUser) return null;
+
+    const user: User = {
+      uid: fbUser.uid,
+      email: fbUser.email,
+      displayName: fbUser.displayName,
+      photoURL: fbUser.photoURL
+    };
+
     await DataService.initUser(user.uid);
     return user;
   },
