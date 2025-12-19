@@ -215,12 +215,18 @@ const Reports: React.FC = () => {
     autoTable(doc, {
       startY: yPos + 30,
       head: [['DATE', 'DESCRIPTION', 'CATEGORY', 'AMOUNT']],
-      body: [...income, ...expenses].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 15).map(t => [
-        t.date,
-        t.name,
-        t.subcategory || t.category,
-        (income.find(i => i.id === t.id) ? '+' : '-') + formatCurrency(t.amount)
-      ]),
+      body: [...income, ...expenses]
+        .sort((a, b) => {
+          const catA = a.subcategory || a.category || '';
+          const catB = b.subcategory || b.category || '';
+          return catA.localeCompare(catB) || b.date.localeCompare(a.date);
+        })
+        .map(t => [
+          t.date,
+          t.name,
+          t.subcategory || t.category,
+          (income.find(i => i.id === t.id) ? '+' : '-') + formatCurrency(t.amount)
+        ]),
       theme: 'grid',
       headStyles: { fillColor: [255, 255, 255], textColor: [100, 116, 139], lineColor: [226, 232, 240], lineWidth: { bottom: 0.1 } },
       styles: { textColor: [71, 85, 105], fontSize: 9, cellPadding: 4, lineColor: [241, 245, 249], lineWidth: { bottom: 0.1 } },
