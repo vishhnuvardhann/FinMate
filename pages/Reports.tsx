@@ -56,6 +56,68 @@ const Reports: React.FC = () => {
   });
   const sortedCategories = Object.entries(expenseCategories).sort((a, b) => b[1] - a[1]);
 
+  const generatePDF = () => {
+    if (!data) return;
+    const doc = new jsPDF();
+    const startStr = new Date(dateRange.start).toLocaleDateString();
+    const endStr = new Date(dateRange.end).toLocaleDateString();
+
+    // Title
+    doc.setFontSize(22);
+    doc.setTextColor(79, 70, 229);
+    doc.text('FinMate Financial Report', 14, 20);
+
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(`Period: ${startStr} - ${endStr}`, 14, 30);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 36);
+
+    // Summary
+    doc.setFillColor(243, 244, 246);
+    doc.roundedRect(14, 45, 180, 25, 3, 3, 'F');
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text('NET WORTH', 20, 55);
+    doc.text('TOTAL ASSETS', 80, 55);
+    doc.text('TOTAL LIABILITIES', 140, 55);
+
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text(formatCurrency(netWorth), 20, 63);
+    doc.text(formatCurrency(totalAssets), 80, 63);
+    doc.text(formatCurrency(totalLiabilities), 140, 63);
+
+    let finalY = 80;
+
+    // Assets Table
+    doc.setFontSize(14);
+    doc.setTextColor(79, 70, 229);
+    doc.text('Assets Breakdown', 14, finalY);
+
+    const autoTable = (autoTableModule as any).default || autoTableModule;
+    autoTable(doc, {
+      startY: finalY + 5,
+      head: [['Asset Name', 'Category', 'Value']],
+      body: data.assets.map(a => [a.name, a.category, formatCurrency(a.amount)]),
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229] }
+    });
+
+    finalY = (doc as any).lastAutoTable.finalY + 15;
+
+    // Liabilities Table
+    doc.text('Liabilities Breakdown', 14, finalY);
+    autoTable(doc, {
+      startY: finalY + 5,
+      head: [['Liability Name', 'Category', 'Amount']],
+      body: data.liabilities.map(l => [l.name, l.category, formatCurrency(l.amount)]),
+      theme: 'grid',
+      headStyles: { fillColor: [236, 72, 153] }
+    });
+
+    doc.save('FinMate_Report.pdf');
+  };
+
   const handlePrint = () => {
     window.print();
   }
@@ -88,6 +150,9 @@ const Reports: React.FC = () => {
                 className="bg-transparent text-white text-sm px-2 py-1 outline-none border-none"
               />
             </div>
+            <button onClick={generatePDF} className="text-sm font-medium text-emerald-300 hover:text-white flex items-center gap-1 transition">
+              <i className="ri-file-pdf-line"></i> Download PDF
+            </button>
             <button onClick={handlePrint} className="text-sm font-medium text-indigo-300 hover:text-white flex items-center gap-1 transition">
               <i className="ri-printer-line"></i> Print Report
             </button>
