@@ -114,23 +114,12 @@ const ReportsV2: React.FC = () => {
         // Header
         doc.setFontSize(24);
         doc.setTextColor(100, 116, 139); // Gray title like screenshot
-        doc.text('FinMate Financial Report (v2)', 105, 20, { align: 'center' });
+        doc.text('FinMate Financial Report', 105, 20, { align: 'center' });
 
         doc.setFontSize(10);
         doc.setTextColor(148, 163, 184); // Lighter gray
         doc.text(`Period: ${startStr} - ${endStr}`, 105, 28, { align: 'center' });
         doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 34, { align: 'center' });
-
-        // Debug info for User
-        if (budgetPlan) {
-            doc.setFontSize(8);
-            doc.setTextColor(16, 185, 129); // Green
-            doc.text(`Active Budget Found: ${budgetPlan.month}`, 105, 40, { align: 'center' });
-        } else {
-            doc.setFontSize(8);
-            doc.setTextColor(244, 63, 94); // Red
-            doc.text(`No Budget Plan found for ${reportMonth}`, 105, 40, { align: 'center' });
-        }
 
         // Summary Cards Grid
         // Colors: Blue [59, 130, 246], Emerald [16, 185, 129], Rose [244, 63, 94], Amber [245, 158, 11]
@@ -437,7 +426,7 @@ const ReportsV2: React.FC = () => {
             doc.text(`${i}/${pageCount}`, 200, 290, { align: 'right' });
         }
 
-        doc.save('FinMate_Report_v2.pdf');
+        doc.save('FinMate_Report.pdf');
     };
 
     return (
@@ -477,7 +466,7 @@ const ReportsV2: React.FC = () => {
                             <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl opacity-20 group-hover:opacity-40 blur transition duration-200"></div>
                             <span className="relative flex items-center gap-2">
                                 <i className="ri-file-pdf-2-fill text-2xl text-indigo-600"></i>
-                                Download Report PDF (v2)
+                                Download Report PDF
                             </span>
                         </button>
                     </div>
