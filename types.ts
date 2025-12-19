@@ -58,11 +58,21 @@ export interface AppData {
   lastSynced?: string;
 }
 
+export interface BudgetItem {
+  id: string;
+  category: string;
+  limit: number;
+  description?: string; // Optional specific item description (e.g. "Groceries")
+}
+
 export interface BudgetPlan {
   month: string; // YYYY-MM
   totalLimit: number;
-  categoryLimits: Record<string, number>;
-  categoryDescriptions?: Record<string, string>; // Optional description for each category limit
+  // Deprecated: kept for backward compatibility migration
+  categoryLimits?: Record<string, number>;
+  categoryDescriptions?: Record<string, string>;
+  // New Structure
+  budgetItems?: BudgetItem[];
 }
 
 export interface ForecastResult {

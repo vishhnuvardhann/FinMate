@@ -2,20 +2,20 @@ import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import { DataService } from '../services/dataService';
 import { AuthService } from '../services/authService';
-import { AppData, BudgetPlan, FinancialItem } from '../types';
+import { AppData, BudgetPlan, FinancialItem, BudgetItem } from '../types';
 import { formatCurrency } from '../utils/formatters';
 
 const BudgetPlanner: React.FC = () => {
     const [data, setData] = useState<AppData | null>(null);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [monthlyBudget, setMonthlyBudget] = useState<number>(0);
-    // Category limits state: Map category name -> limit amount
-    const [categoryLimits, setCategoryLimits] = useState<Record<string, number>>({});
-    const [categoryDescriptions, setCategoryDescriptions] = useState<Record<string, string>>({});
+
+    // New State: List of detailed budget items
+    const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
 
     const [newCategory, setNewCategory] = useState('');
     const [newCategoryLimit, setNewCategoryLimit] = useState('');
-    const [newCategoryDesc, setNewCategoryDesc] = useState(''); // New State
+    const [newCategoryDesc, setNewCategoryDesc] = useState('');
     const [sortOption, setSortOption] = useState<'name' | 'limit' | 'spent' | 'status'>('name');
 
     useEffect(() => {
@@ -39,24 +39,35 @@ const BudgetPlanner: React.FC = () => {
 
         if (existingPlan) {
             setMonthlyBudget(existingPlan.totalLimit);
-            setCategoryLimits(existingPlan.categoryLimits || {});
-            setCategoryDescriptions(existingPlan.categoryDescriptions || {});
+
+            // Migration Logic: Convert old format to new format if needed
+            if (existingPlan.budgetItems) {
+                setBudgetItems(existingPlan.budgetItems);
+            } else if (existingPlan.categoryLimits) {
+                const migratedItems: BudgetItem[] = Object.entries(existingPlan.categoryLimits).map(([cat, limit]) => ({
+                    id: Math.random().toString(36).substr(2, 9),
+                    category: cat,
+                    limit: Number(limit), // Explicit cast to fix TS lint
+                    description: existingPlan.categoryDescriptions?.[cat] || ''
+                }));
+                setBudgetItems(migratedItems);
+            } else {
+                setBudgetItems([]);
+            }
         } else {
             setMonthlyBudget(0);
-            setCategoryLimits({});
-            setCategoryDescriptions({});
+            setBudgetItems([]);
         }
     }, [data, currentDate]);
 
-    const saveBudget = async (newTotal: number, newCategoryLimits: Record<string, number>, newCategoryHints: Record<string, string>) => {
+    const saveBudget = async (newTotal: number, newItems: BudgetItem[]) => {
         if (!data) return;
 
         const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
         const newPlan: BudgetPlan = {
             month: currentMonthStr,
             totalLimit: newTotal,
-            categoryLimits: newCategoryLimits,
-            categoryDescriptions: newCategoryHints
+            budgetItems: newItems
         };
 
         const updatedPlans = data.budgetPlans ? [...data.budgetPlans] : [];
@@ -75,27 +86,30 @@ const BudgetPlanner: React.FC = () => {
 
     const handleTotalBudgetChange = (amount: number) => {
         setMonthlyBudget(amount);
-        saveBudget(amount, categoryLimits, categoryDescriptions);
+        saveBudget(amount, budgetItems);
     };
 
-    const handleCategoryLimitChange = (category: string, amount: number) => {
-        const newLimits = { ...categoryLimits, [category]: amount };
-        setCategoryLimits(newLimits);
-        saveBudget(monthlyBudget, newLimits, categoryDescriptions);
+    // Update a specific item's limit
+    const handleItemLimitChange = (id: string, amount: number) => {
+        const newItems = budgetItems.map(item => item.id === id ? { ...item, limit: amount } : item);
+        setBudgetItems(newItems);
+        saveBudget(monthlyBudget, newItems);
     };
 
     const handleManualAddCategory = (e: React.FormEvent) => {
         e.preventDefault();
         if (!newCategory || !data) return;
 
-        // Add to limits
-        const amount = parseFloat(newCategoryLimit) || 0;
-        const newLimits = { ...categoryLimits, [newCategory]: amount };
-        const newDescs = { ...categoryDescriptions, [newCategory]: newCategoryDesc }; // Save description
+        const newItem: BudgetItem = {
+            id: Math.random().toString(36).substr(2, 9),
+            category: newCategory,
+            limit: parseFloat(newCategoryLimit) || 0,
+            description: newCategoryDesc
+        };
 
-        setCategoryLimits(newLimits);
-        setCategoryDescriptions(newDescs);
-        saveBudget(monthlyBudget, newLimits, newDescs);
+        const newItems = [...budgetItems, newItem];
+        setBudgetItems(newItems);
+        saveBudget(monthlyBudget, newItems);
 
         setNewCategory('');
         setNewCategoryLimit('');
@@ -116,27 +130,32 @@ const BudgetPlanner: React.FC = () => {
     const currentMonthExpenses = data.expenses.filter(e => e.date.startsWith(currentMonthStr));
     const totalActualExpense = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-    // Get unique categories (both from expenses AND existing limits)
-    const expenseCategories = new Set<string>(data.expenses.map(e => e.subcategory).filter((c): c is string => !!c));
-    const limitCategories = Object.keys(categoryLimits);
-    const allCategoriesSet = new Set<string>([...expenseCategories, ...limitCategories]);
+    // Group items by Category for display logic
+    // 1. Get all unique categories from expenses AND budget items
+    const expenseCategories = new Set(data.expenses.map(e => e.subcategory).filter((c): c is string => !!c));
+    const budgetCategories = new Set(budgetItems.map(i => i.category));
+    const allCategories = Array.from(new Set([...Array.from(expenseCategories), ...Array.from(budgetCategories)]));
 
-    // Convert to array and Sort
-    const sortedCategories = Array.from(allCategoriesSet).sort((a: string, b: string) => {
-        const limitA = categoryLimits[a] || 0;
-        const limitB = categoryLimits[b] || 0;
-        const spentA = currentMonthExpenses.filter(e => e.subcategory === a).reduce((sum, e) => sum + e.amount, 0);
-        const spentB = currentMonthExpenses.filter(e => e.subcategory === b).reduce((sum, e) => sum + e.amount, 0);
+    // 2. Create aggregated data structure
+    const categoryData = allCategories.map(cat => {
+        const items = budgetItems.filter(i => i.category === cat);
+        const totalLimit = items.reduce((sum, i) => sum + i.limit, 0);
+        const spent = currentMonthExpenses.filter(e => e.subcategory === cat).reduce((sum, e) => sum + e.amount, 0);
+        const isOver = totalLimit > 0 && spent > totalLimit;
 
+        // Calculate status score for sorting
+        const statusScore = totalLimit > 0 ? spent / totalLimit : 0;
+
+        return { cat, items, totalLimit, spent, isOver, statusScore };
+    });
+
+    // 3. Sort
+    const sortedCategoryData = categoryData.sort((a, b) => {
         switch (sortOption) {
-            case 'limit': return limitB - limitA; // High to Low
-            case 'spent': return spentB - spentA; // High to Low
-            case 'status': {
-                const statusA = limitA > 0 ? spentA / limitA : 0;
-                const statusB = limitB > 0 ? spentB / limitB : 0;
-                return statusB - statusA; // Overbudget first
-            }
-            default: return a.localeCompare(b); // Name A-Z
+            case 'limit': return b.totalLimit - a.totalLimit;
+            case 'spent': return b.spent - a.spent;
+            case 'status': return b.statusScore - a.statusScore;
+            default: return (a.cat as string).localeCompare(b.cat as string); // Explicit string cast
         }
     });
 
@@ -234,7 +253,7 @@ const BudgetPlanner: React.FC = () => {
                                 <input
                                     value={newCategory}
                                     onChange={e => setNewCategory(e.target.value)}
-                                    placeholder="Category Name"
+                                    placeholder="Category Name (e.g. Food)"
                                     className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
                                 />
                             </div>
@@ -256,7 +275,7 @@ const BudgetPlanner: React.FC = () => {
                             <input
                                 value={newCategoryDesc}
                                 onChange={e => setNewCategoryDesc(e.target.value)}
-                                placeholder="Description (Optional, e.g. Future Vacation)"
+                                placeholder="Description (e.g. Groceries)"
                                 className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-indigo-500"
                             />
                         </div>
@@ -280,49 +299,57 @@ const BudgetPlanner: React.FC = () => {
                     </div>
 
                     <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                        {sortedCategories.length === 0 && <p className="text-sm text-gray-500 italic">No expense categories found. Add expenses to see them here.</p>}
+                        {sortedCategoryData.length === 0 && <p className="text-sm text-gray-500 italic">No expense categories found. Add expenses to see them here.</p>}
 
-                        {sortedCategories.map(cat => {
-                            const limit = categoryLimits[cat] || 0;
-                            const desc = categoryDescriptions[cat] || ''; // Get Description
-                            const spent = currentMonthExpenses.filter(e => e.subcategory === cat).reduce((sum, e) => sum + e.amount, 0);
-                            const isOver = limit > 0 && spent > limit;
-
+                        {sortedCategoryData.map(({ cat, items, totalLimit, spent, isOver }) => {
                             return (
-                                <div key={cat} className="p-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition">
-                                    <div className="flex justify-between items-start mb-2">
+                                <div key={cat} className="rounded-lg bg-white/5 border border-white/5 overflow-hidden transition">
+                                    {/* Category Header */}
+                                    <div className="p-3 bg-white/5 flex justify-between items-center">
                                         <div>
-                                            <span className="font-medium text-white block">{cat}</span>
-                                            {/* Show Description if available */}
-                                            {desc && <span className="text-[10px] text-gray-500 italic block">{desc}</span>}
+                                            <span className="font-medium text-white">{cat}</span>
                                         </div>
-                                        {limit > 0 && (
-                                            <span className={`text-xs px-2 py-0.5 rounded ${isOver ? 'bg-red-500/20 text-red-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
-                                                {isOver ? 'Over Limit' : 'Good'}
-                                            </span>
-                                        )}
+                                        <div className="flex items-center gap-2">
+                                            {totalLimit > 0 && (
+                                                <span className={`text-xs px-2 py-0.5 rounded ${isOver ? 'bg-red-500/20 text-red-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
+                                                    {isOver ? 'Over Limit' : 'Good'}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
 
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex-1">
-                                            <div className="flex justify-between text-xs text-gray-400 mb-1">
-                                                <span>Spent: {formatCurrency(spent)}</span>
-                                                <input
-                                                    type="number"
-                                                    placeholder="Set Limit"
-                                                    value={limit || ''}
-                                                    onChange={(e) => handleCategoryLimitChange(cat, parseFloat(e.target.value) || 0)}
-                                                    className="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 w-24 text-right text-indigo-300 focus:border-indigo-500 focus:outline-none"
-                                                />
-                                            </div>
-                                            <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full ${isOver ? 'bg-red-500' : 'bg-indigo-500'}`}
-                                                    style={{ width: `${Math.min((spent / (limit || 1)) * 100, 100)}%` }}
-                                                ></div>
-                                            </div>
+                                    {/* Combined Progress */}
+                                    <div className="px-3 pb-3 pt-2">
+                                        <div className="flex justify-between text-xs text-gray-400 mb-1">
+                                            <span>Spent: {formatCurrency(spent)}</span>
+                                            <span>Limit: {formatCurrency(totalLimit)}</span>
+                                        </div>
+                                        <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full ${isOver ? 'bg-red-500' : 'bg-indigo-500'}`}
+                                                style={{ width: `${Math.min((spent / (totalLimit || 1)) * 100, 100)}%` }}
+                                            ></div>
                                         </div>
                                     </div>
+
+                                    {/* Detailed Items */}
+                                    {items.length > 0 && (
+                                        <div className="border-t border-white/5">
+                                            {items.map(item => (
+                                                <div key={item.id} className="flex justify-between items-center p-3 hover:bg-white/5 text-sm">
+                                                    <span className="text-gray-300 pl-4 border-l-2 border-indigo-500/30">
+                                                        {item.description || 'General'}
+                                                    </span>
+                                                    <input
+                                                        type="number"
+                                                        value={item.limit || ''}
+                                                        onChange={(e) => handleItemLimitChange(item.id, parseFloat(e.target.value) || 0)}
+                                                        className="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 w-24 text-right text-indigo-300 focus:border-indigo-500 focus:outline-none text-xs"
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
