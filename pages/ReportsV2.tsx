@@ -100,6 +100,17 @@ const ReportsV2: React.FC = () => {
 
         // --- PAGE 1 ---
 
+        // Define budget plan early for header use
+        const reportMonth = dateRange.start.substring(0, 7); // YYYY-MM
+        const budgetPlan = data.budgetPlans?.find(b => b.month === reportMonth);
+        const categoryLimits: Record<string, number> = {};
+
+        if (budgetPlan && budgetPlan.budgetItems) {
+            budgetPlan.budgetItems.forEach(item => {
+                categoryLimits[item.category] = (categoryLimits[item.category] || 0) + item.limit;
+            });
+        }
+
         // Header
         doc.setFontSize(24);
         doc.setTextColor(100, 116, 139); // Gray title like screenshot
@@ -197,16 +208,8 @@ const ReportsV2: React.FC = () => {
         doc.setTextColor(15, 23, 42);
         doc.text('Category Spending', 14, 70);
 
-        // Find Budget Plan for this month
-        const reportMonth = dateRange.start.substring(0, 7); // YYYY-MM
-        const budgetPlan = data.budgetPlans?.find(b => b.month === reportMonth);
-        const categoryLimits: Record<string, number> = {};
+        // Budget Plan already loaded above
 
-        if (budgetPlan && budgetPlan.budgetItems) {
-            budgetPlan.budgetItems.forEach(item => {
-                categoryLimits[item.category] = (categoryLimits[item.category] || 0) + item.limit;
-            });
-        }
 
         let yPos = 85;
         sortedCategories.slice(0, 8).forEach(([cat, amount]) => {
