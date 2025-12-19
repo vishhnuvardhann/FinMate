@@ -13,7 +13,7 @@ export interface FinancialItem {
   name: string;
   amount: number;
   category: CategoryType;
-  subcategory?: string; 
+  subcategory?: string;
   date: string; // ISO YYYY-MM-DD
   recurring: boolean; // For auto-rollover
   icon?: string;
@@ -24,7 +24,7 @@ export interface EMI {
   userId: string;
   name: string;
   amount: number;
-  dueDate: number; 
+  dueDate: number;
   isPaid: boolean;
 }
 
@@ -52,9 +52,16 @@ export interface AppData {
   expenses: FinancialItem[];
   emis: EMI[];
   milestones: Milestone[];
+  budgetPlans: BudgetPlan[];
   forecast: ForecastConfig;
   currency: string;
   lastSynced?: string;
+}
+
+export interface BudgetPlan {
+  month: string; // YYYY-MM
+  totalLimit: number;
+  categoryLimits: Record<string, number>;
 }
 
 export interface ForecastResult {

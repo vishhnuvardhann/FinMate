@@ -27,7 +27,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: 'ri-dashboard-line' },
-    { path: '/budget', label: 'Budget', icon: 'ri-wallet-3-line' },
+    { path: '/budget', label: 'Transactions', icon: 'ri-wallet-3-line' },
+    { path: '/budget-planner', label: 'Budget Planner', icon: 'ri-money-cny-circle-line' },
     { path: '/balance', label: 'Balance Sheet', icon: 'ri-scales-3-line' },
     { path: '/forecasting', label: 'Forecasting', icon: 'ri-line-chart-line' },
     { path: '/emis', label: 'Bills & EMI', icon: 'ri-calendar-check-line' },
@@ -54,9 +55,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Sidebar - Desktop */}
       <aside className="hidden md:flex flex-col w-64 glass-panel border-r border-white/10 z-20">
         <div className="p-6 flex items-center gap-3">
-          
+
           {/* ✅ NEW LOGO HERE */}
-          <img 
+          <img
             src="/logo/finamate-logo.png"
             alt="FinMate Logo"
             className="w-10 h-10 rounded-xl object-cover shadow-lg"
@@ -70,11 +71,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <button
               key={item.path}
               onClick={() => handleNav(item.path)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
-                location.pathname === item.path
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${location.pathname === item.path
                   ? 'bg-primary/20 text-indigo-300 border border-primary/20 shadow-inner'
                   : 'hover:bg-white/5 text-gray-400 hover:text-white'
-              }`}
+                }`}
             >
               <i className={`${item.icon} text-xl ${location.pathname === item.path ? 'text-indigo-400' : 'text-gray-500 group-hover:text-white'}`}></i>
               <span className="font-medium">{item.label}</span>
@@ -104,7 +104,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* ✅ MOBILE LOGO HERE */}
         <div className="flex items-center gap-2">
-          <img 
+          <img
             src="/logo/finamate-logo.png"
             className="w-8 h-8 rounded-lg object-cover"
             alt="FinMate Logo"
@@ -125,11 +125,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <button
                 key={item.path}
                 onClick={() => handleNav(item.path)}
-                className={`w-full flex items-center gap-4 px-4 py-4 rounded-xl text-lg ${
-                  location.pathname === item.path
+                className={`w-full flex items-center gap-4 px-4 py-4 rounded-xl text-lg ${location.pathname === item.path
                     ? 'bg-indigo-600/20 text-indigo-300'
                     : 'text-gray-400'
-                }`}
+                  }`}
               >
                 <i className={`${item.icon} text-2xl`}></i>
                 {item.label}

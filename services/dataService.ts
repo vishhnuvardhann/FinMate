@@ -13,6 +13,7 @@ const generateDefaultData = (userId: string): AppData => ({
   expenses: [],
   emis: [],
   milestones: [],
+  budgetPlans: [],
   forecast: {
     initial: 0,
     monthly: 0,
@@ -26,12 +27,12 @@ export const DataService = {
   initUser: async (userId: string) => {
     const docRef = doc(db, "users", userId);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       const defaultData = generateDefaultData(userId);
       await setDoc(docRef, defaultData);
     }
-    
+
     // Check for recurring transactions upon init
     await DataService.checkRecurringTransactions(userId);
   },
@@ -40,12 +41,12 @@ export const DataService = {
     try {
       const docRef = doc(db, "users", userId);
       const docSnap = await getDoc(docRef);
-      
+
       if (docSnap.exists()) {
         const parsed = docSnap.data() as Partial<AppData>;
         // Ensure defaults for new fields to prevent crashes
         const defaults = generateDefaultData(userId);
-        return { ...defaults, ...parsed, userId }; 
+        return { ...defaults, ...parsed, userId };
       }
       // If doc missing for some reason, return default
       return generateDefaultData(userId);
@@ -74,24 +75,24 @@ export const DataService = {
       window.location.reload();
     }
   },
-  
+
   // Logic to handle auto-adding recurring transactions for the new month
   checkRecurringTransactions: async (userId: string) => {
     const data = await DataService.load(userId);
     const today = new Date();
     const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-    
+
     // Check if we have any entries for the current month
-    const hasCurrentMonthEntries = data.expenses.some(e => e.date.startsWith(currentMonthStr)) || 
-                                   data.income.some(i => i.date.startsWith(currentMonthStr));
-    
+    const hasCurrentMonthEntries = data.expenses.some(e => e.date.startsWith(currentMonthStr)) ||
+      data.income.some(i => i.date.startsWith(currentMonthStr));
+
     if (!hasCurrentMonthEntries) {
       console.log('New month detected! Rolling over recurring items...');
-      
+
       // Find items from the previous month (or any past recurring item that acts as a template)
       const recurringExpenses = data.expenses.filter(e => e.recurring);
       const recurringIncome = data.income.filter(i => i.recurring);
-      
+
       // Helper to avoid duplicates
       const uniqueItems = new Map();
       [...recurringExpenses, ...recurringIncome].forEach(item => {
@@ -99,9 +100,9 @@ export const DataService = {
           uniqueItems.set(item.name, item);
         }
       });
-      
+
       const newItems: FinancialItem[] = [];
-      
+
       uniqueItems.forEach((item: FinancialItem) => {
         newItems.push({
           ...item,
@@ -110,14 +111,14 @@ export const DataService = {
           recurring: true
         });
       });
-      
+
       // Add to data
       if (newItems.length > 0) {
         newItems.forEach(item => {
           if (item.category === 'income') data.income.push(item);
           else data.expenses.push(item);
         });
-        
+
         await DataService.save(data);
       }
     }
@@ -133,15 +134,15 @@ export const DataService = {
     const targetDate = new Date();
     targetDate.setMonth(targetDate.getMonth() + monthOffset);
     const targetStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
-    
+
     const totalIncome = data.income
       .filter(i => i.date.startsWith(targetStr))
       .reduce((sum, item) => sum + item.amount, 0);
-      
+
     const totalExpenses = data.expenses
       .filter(i => i.date.startsWith(targetStr))
       .reduce((sum, item) => sum + item.amount, 0);
-      
+
     return totalIncome - totalExpenses;
   }
 };

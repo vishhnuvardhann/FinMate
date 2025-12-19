@@ -25,7 +25,7 @@ const Dashboard: React.FC = () => {
   const netWorth = DataService.getNetWorth(data);
   const totalAssets = data.assets.reduce((sum, i) => sum + i.amount, 0);
   const totalLiabilities = data.liabilities.reduce((sum, i) => sum + i.amount, 0);
-  
+
   // Calculate current month's flow
   const monthlyFlow = DataService.getMonthlyCashflow(data, 0);
 
@@ -36,11 +36,11 @@ const Dashboard: React.FC = () => {
     d.setMonth(d.getMonth() - i);
     const monthName = d.toLocaleString('default', { month: 'short' });
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    
+
     // Calculate totals for that specific month
     const income = data.income.filter(item => item.date.startsWith(dateStr)).reduce((sum, item) => sum + item.amount, 0);
     const expense = data.expenses.filter(item => item.date.startsWith(dateStr)).reduce((sum, item) => sum + item.amount, 0);
-    
+
     trendData.push({
       name: monthName,
       income,
@@ -48,6 +48,16 @@ const Dashboard: React.FC = () => {
       savings: income - expense
     });
   }
+
+  // --- Budget Calculations ---
+  const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  const currentMonthPlan = data.budgetPlans?.find(p => p.month === currentMonthStr);
+  const currentMonthExpenses = data.expenses
+    .filter(e => e.date.startsWith(currentMonthStr))
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const budgetLimit = currentMonthPlan?.totalLimit || 0;
+  const isOverBudget = budgetLimit > 0 && currentMonthExpenses > budgetLimit;
 
   // Asset allocation data
   const assetData = data.assets.map(a => ({ name: a.name, value: a.amount }));
@@ -107,7 +117,7 @@ const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-         <Card>
+        <Card>
           <div className="flex justify-between items-start">
             <div>
               <p className="text-gray-400 text-sm font-medium uppercase tracking-wider">This Month's Flow</p>
@@ -130,8 +140,8 @@ const Dashboard: React.FC = () => {
               <BarChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                 <XAxis dataKey="name" stroke="#94a3b8" tickLine={false} axisLine={false} />
-                <YAxis stroke="#94a3b8" tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value/1000}k`} />
-                <Tooltip 
+                <YAxis stroke="#94a3b8" tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value / 1000}k`} />
+                <Tooltip
                   contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '8px', color: '#f8fafc' }}
                   itemStyle={{ color: '#818cf8' }}
                   cursor={{ fill: '#ffffff05' }}
@@ -146,7 +156,7 @@ const Dashboard: React.FC = () => {
 
         <Card title="Asset Allocation" className="min-h-[400px]">
           <div className="h-[300px] w-full mt-4 flex items-center justify-center relative">
-             <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={assetData}
@@ -162,10 +172,10 @@ const Dashboard: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip 
-                   contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '8px', color: '#f8fafc' }}
-                   itemStyle={{ color: '#e2e8f0' }}
-                   formatter={(value: number) => [formatCurrency(value), 'Value']}
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '8px', color: '#f8fafc' }}
+                  itemStyle={{ color: '#e2e8f0' }}
+                  formatter={(value: number) => [formatCurrency(value), 'Value']}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -173,18 +183,18 @@ const Dashboard: React.FC = () => {
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center">
                 <p className="text-xs text-gray-400 uppercase">Total</p>
-                <p className="text-lg font-bold text-white">{(totalAssets/100000).toFixed(2)}L</p>
+                <p className="text-lg font-bold text-white">{(totalAssets / 100000).toFixed(2)}L</p>
               </div>
             </div>
           </div>
           <div className="mt-2 space-y-2 max-h-[100px] overflow-y-auto custom-scrollbar">
             {assetData.map((item, index) => (
               <div key={index} className="flex justify-between items-center text-sm">
-                 <div className="flex items-center gap-2">
-                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                   <span className="text-gray-300">{item.name}</span>
-                 </div>
-                 <span className="font-medium text-white">{formatCurrency(item.value)}</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                  <span className="text-gray-300">{item.name}</span>
+                </div>
+                <span className="font-medium text-white">{formatCurrency(item.value)}</span>
               </div>
             ))}
           </div>
@@ -195,51 +205,76 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card title="Financial Insights">
           <div className="space-y-4">
-             {monthlyFlow < 0 ? (
-               <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex gap-3 items-start">
-                 <i className="ri-alert-line text-red-400 text-xl mt-1"></i>
-                 <div>
-                   <h4 className="text-red-400 font-semibold">Overspending Alert</h4>
-                   <p className="text-sm text-gray-300">You have spent {formatCurrency(Math.abs(monthlyFlow))} more than you earned this month. Review your 'Entertainment' budget.</p>
-                 </div>
-               </div>
-             ) : (
-               <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex gap-3 items-start">
-                 <i className="ri-thumb-up-line text-emerald-400 text-xl mt-1"></i>
-                 <div>
-                   <h4 className="text-emerald-400 font-semibold">Great Job!</h4>
-                   <p className="text-sm text-gray-300">You are cash positive this month. Consider investing the surplus of {formatCurrency(monthlyFlow)}.</p>
-                 </div>
-               </div>
-             )}
+            {/* Budget Alert - New */}
+            <div className="pb-4 border-b border-white/5">
+              {budgetLimit > 0 ? (
+                <div className={`p-4 rounded-xl border flex items-center gap-3 ${isOverBudget ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
+                  <i className={`text-2xl ${isOverBudget ? 'ri-alarm-warning-line text-red-400' : 'ri-checkbox-circle-line text-emerald-400'}`}></i>
+                  <div>
+                    <h4 className={`font-bold ${isOverBudget ? 'text-red-400' : 'text-emerald-400'}`}>
+                      {isOverBudget ? 'Budget Exceeded' : 'Within Budget'}
+                    </h4>
+                    <p className="text-sm text-gray-400">
+                      {isOverBudget
+                        ? `Exceeded by ${formatCurrency(currentMonthExpenses - budgetLimit)}`
+                        : `Remaining: ${formatCurrency(budgetLimit - currentMonthExpenses)}`
+                      }
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-slate-800/10 border border-slate-700/20 text-center">
+                  <p className="text-sm text-gray-500 mb-1">No budget set for this month.</p>
+                  <a href="#/budget-planner" className="text-indigo-400/80 text-sm font-medium hover:text-indigo-300 transition">Set a Budget</a>
+                </div>
+              )}
+            </div>
+
+            {monthlyFlow < 0 ? (
+              <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex gap-3 items-start">
+                <i className="ri-alert-line text-red-400 text-xl mt-1"></i>
+                <div>
+                  <h4 className="text-red-400 font-semibold">Overspending Alert</h4>
+                  <p className="text-sm text-gray-300">You have spent {formatCurrency(Math.abs(monthlyFlow))} more than you earned this month. Review your 'Entertainment' budget.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex gap-3 items-start">
+                <i className="ri-thumb-up-line text-emerald-400 text-xl mt-1"></i>
+                <div>
+                  <h4 className="text-emerald-400 font-semibold">Great Job!</h4>
+                  <p className="text-sm text-gray-300">You are cash positive this month. Consider investing the surplus of {formatCurrency(monthlyFlow)}.</p>
+                </div>
+              </div>
+            )}
           </div>
         </Card>
 
         <Card title="Financial Milestones">
           <div className="space-y-4">
-          {data.milestones.map((m) => {
-            const progress = (m.currentAmount / m.targetAmount) * 100;
-            return (
-              <div key={m.id} className="bg-white/5 rounded-xl p-4 border border-white/5">
-                <div className="flex justify-between mb-2">
-                  <h4 className="font-semibold text-white">{m.name}</h4>
-                  <span className="text-xs text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded">
-                    Due: {new Date(m.deadline).toLocaleDateString()}
-                  </span>
+            {data.milestones.map((m) => {
+              const progress = (m.currentAmount / m.targetAmount) * 100;
+              return (
+                <div key={m.id} className="bg-white/5 rounded-xl p-4 border border-white/5">
+                  <div className="flex justify-between mb-2">
+                    <h4 className="font-semibold text-white">{m.name}</h4>
+                    <span className="text-xs text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded">
+                      Due: {new Date(m.deadline).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-400 mb-2">
+                    <span>{formatCurrency(m.currentAmount)}</span>
+                    <span>{formatCurrency(m.targetAmount)}</span>
+                  </div>
+                  <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
+                      style={{ width: `${Math.min(progress, 100)}%` }}
+                    ></div>
+                  </div>
                 </div>
-                <div className="flex justify-between text-sm text-gray-400 mb-2">
-                  <span>{formatCurrency(m.currentAmount)}</span>
-                  <span>{formatCurrency(m.targetAmount)}</span>
-                </div>
-                <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500" 
-                    style={{ width: `${Math.min(progress, 100)}%` }}
-                  ></div>
-                </div>
-              </div>
-            )
-          })}
+              )
+            })}
           </div>
         </Card>
       </div>
