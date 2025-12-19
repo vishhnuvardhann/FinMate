@@ -11,9 +11,11 @@ const BudgetPlanner: React.FC = () => {
     const [monthlyBudget, setMonthlyBudget] = useState<number>(0);
     // Category limits state: Map category name -> limit amount
     const [categoryLimits, setCategoryLimits] = useState<Record<string, number>>({});
+    const [categoryDescriptions, setCategoryDescriptions] = useState<Record<string, string>>({});
 
     const [newCategory, setNewCategory] = useState('');
     const [newCategoryLimit, setNewCategoryLimit] = useState('');
+    const [newCategoryDesc, setNewCategoryDesc] = useState(''); // New State
     const [sortOption, setSortOption] = useState<'name' | 'limit' | 'spent' | 'status'>('name');
 
     useEffect(() => {
@@ -38,20 +40,23 @@ const BudgetPlanner: React.FC = () => {
         if (existingPlan) {
             setMonthlyBudget(existingPlan.totalLimit);
             setCategoryLimits(existingPlan.categoryLimits || {});
+            setCategoryDescriptions(existingPlan.categoryDescriptions || {});
         } else {
             setMonthlyBudget(0);
             setCategoryLimits({});
+            setCategoryDescriptions({});
         }
     }, [data, currentDate]);
 
-    const saveBudget = async (newTotal: number, newCategoryLimits: Record<string, number>) => {
+    const saveBudget = async (newTotal: number, newCategoryLimits: Record<string, number>, newCategoryHints: Record<string, string>) => {
         if (!data) return;
 
         const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
         const newPlan: BudgetPlan = {
             month: currentMonthStr,
             totalLimit: newTotal,
-            categoryLimits: newCategoryLimits
+            categoryLimits: newCategoryLimits,
+            categoryDescriptions: newCategoryHints
         };
 
         const updatedPlans = data.budgetPlans ? [...data.budgetPlans] : [];
@@ -70,13 +75,13 @@ const BudgetPlanner: React.FC = () => {
 
     const handleTotalBudgetChange = (amount: number) => {
         setMonthlyBudget(amount);
-        saveBudget(amount, categoryLimits);
+        saveBudget(amount, categoryLimits, categoryDescriptions);
     };
 
     const handleCategoryLimitChange = (category: string, amount: number) => {
         const newLimits = { ...categoryLimits, [category]: amount };
         setCategoryLimits(newLimits);
-        saveBudget(monthlyBudget, newLimits);
+        saveBudget(monthlyBudget, newLimits, categoryDescriptions);
     };
 
     const handleManualAddCategory = (e: React.FormEvent) => {
@@ -86,11 +91,15 @@ const BudgetPlanner: React.FC = () => {
         // Add to limits
         const amount = parseFloat(newCategoryLimit) || 0;
         const newLimits = { ...categoryLimits, [newCategory]: amount };
+        const newDescs = { ...categoryDescriptions, [newCategory]: newCategoryDesc }; // Save description
+
         setCategoryLimits(newLimits);
-        saveBudget(monthlyBudget, newLimits);
+        setCategoryDescriptions(newDescs);
+        saveBudget(monthlyBudget, newLimits, newDescs);
 
         setNewCategory('');
         setNewCategoryLimit('');
+        setNewCategoryDesc('');
     };
 
     const changeMonth = (offset: number) => {
@@ -219,27 +228,38 @@ const BudgetPlanner: React.FC = () => {
                 <Card title="Category Breakdown" className="h-fit">
 
                     {/* Add Category Form */}
-                    <form onSubmit={handleManualAddCategory} className="mb-6 flex gap-2">
-                        <div className="flex-1">
+                    <form onSubmit={handleManualAddCategory} className="mb-6 flex flex-col gap-2">
+                        <div className="flex gap-2">
+                            <div className="flex-1">
+                                <input
+                                    value={newCategory}
+                                    onChange={e => setNewCategory(e.target.value)}
+                                    placeholder="Category Name"
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                                />
+                            </div>
+                            <div className="w-24">
+                                <input
+                                    type="number"
+                                    value={newCategoryLimit}
+                                    onChange={e => setNewCategoryLimit(e.target.value)}
+                                    placeholder="Limit"
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                                />
+                            </div>
+                            <button type="submit" className="p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition">
+                                <i className="ri-add-line"></i>
+                            </button>
+                        </div>
+                        {/* New Description Input */}
+                        <div className="w-full">
                             <input
-                                value={newCategory}
-                                onChange={e => setNewCategory(e.target.value)}
-                                placeholder="Add Category..."
-                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                                value={newCategoryDesc}
+                                onChange={e => setNewCategoryDesc(e.target.value)}
+                                placeholder="Description (Optional, e.g. Future Vacation)"
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-indigo-500"
                             />
                         </div>
-                        <div className="w-24">
-                            <input
-                                type="number"
-                                value={newCategoryLimit}
-                                onChange={e => setNewCategoryLimit(e.target.value)}
-                                placeholder="Limit"
-                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                            />
-                        </div>
-                        <button type="submit" className="p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition">
-                            <i className="ri-add-line"></i>
-                        </button>
                     </form>
 
                     <div className="flex justify-between items-center mb-4">
@@ -264,13 +284,18 @@ const BudgetPlanner: React.FC = () => {
 
                         {sortedCategories.map(cat => {
                             const limit = categoryLimits[cat] || 0;
+                            const desc = categoryDescriptions[cat] || ''; // Get Description
                             const spent = currentMonthExpenses.filter(e => e.subcategory === cat).reduce((sum, e) => sum + e.amount, 0);
                             const isOver = limit > 0 && spent > limit;
 
                             return (
                                 <div key={cat} className="p-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="font-medium text-white">{cat}</span>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <span className="font-medium text-white block">{cat}</span>
+                                            {/* Show Description if available */}
+                                            {desc && <span className="text-[10px] text-gray-500 italic block">{desc}</span>}
+                                        </div>
                                         {limit > 0 && (
                                             <span className={`text-xs px-2 py-0.5 rounded ${isOver ? 'bg-red-500/20 text-red-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
                                                 {isOver ? 'Over Limit' : 'Good'}
@@ -304,6 +329,37 @@ const BudgetPlanner: React.FC = () => {
                     </div>
                 </Card>
             </div>
+
+            {/* Transactions List */}
+            <Card title="Monthly Transactions">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="border-b border-white/10 text-gray-400 text-sm">
+                                <th className="pb-3 font-medium">Date</th>
+                                <th className="pb-3 font-medium">Description</th>
+                                <th className="pb-3 font-medium">Category</th>
+                                <th className="pb-3 font-medium text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {currentMonthExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(item => (
+                                <tr key={item.id} className="hover:bg-white/5 transition">
+                                    <td className="py-3 text-gray-300 text-sm">{item.date}</td>
+                                    <td className="py-3 text-white font-medium">{item.name}</td>
+                                    <td className="py-3 text-gray-400 text-sm">
+                                        <span className="px-2 py-1 rounded bg-white/5 border border-white/5">{item.subcategory}</span>
+                                    </td>
+                                    <td className="py-3 text-white text-right font-medium">{formatCurrency(item.amount)}</td>
+                                </tr>
+                            ))}
+                            {currentMonthExpenses.length === 0 && (
+                                <tr><td colSpan={4} className="py-8 text-center text-gray-500 italic">No transactions found for this month.</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
 
         </div>
     );

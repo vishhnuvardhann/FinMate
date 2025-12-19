@@ -62,6 +62,7 @@ export interface BudgetPlan {
   month: string; // YYYY-MM
   totalLimit: number;
   categoryLimits: Record<string, number>;
+  categoryDescriptions?: Record<string, string>; // Optional description for each category limit
 }
 
 export interface ForecastResult {
