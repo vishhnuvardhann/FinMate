@@ -177,28 +177,71 @@ const ReportsV2: React.FC = () => {
         doc.setTextColor(15, 23, 42);
         doc.text('Category Spending', 14, 70);
 
+        // Find Budget Plan for this month
+        const reportMonth = dateRange.start.substring(0, 7); // YYYY-MM
+        const budgetPlan = data.budgetPlans?.find(b => b.month === reportMonth);
+        const categoryLimits: Record<string, number> = {};
+
+        if (budgetPlan && budgetPlan.budgetItems) {
+            budgetPlan.budgetItems.forEach(item => {
+                categoryLimits[item.category] = (categoryLimits[item.category] || 0) + item.limit;
+            });
+        }
+
         let yPos = 85;
         sortedCategories.slice(0, 8).forEach(([cat, amount]) => {
-            const percentage = Math.min((amount / (totalExpense || 1)), 1);
+            const limit = categoryLimits[cat] || 0;
+            let percentage = 0;
 
-            // Logic for status based on % of total expense (imperfect without budget limit, but matching visual)
+            // Logic for status
             let label = 'GOOD';
             let statusColor: [number, number, number] = [16, 185, 129]; // Green
 
-            if (percentage > 0.4) {
-                label = 'EXCEEDED';
-                statusColor = [244, 63, 94]; // Red
-            } else if (percentage > 0.15) {
-                label = 'ON TRACK';
-                statusColor = [16, 185, 129]; // Green
+            if (limit > 0) {
+                // We have a budget limit
+                percentage = Math.min((amount / limit), 1);
+                if (amount > limit) {
+                    label = 'EXCEEDED';
+                    statusColor = [244, 63, 94]; // Red
+                } else if (amount > limit * 0.85) {
+                    label = 'WARNING';
+                    statusColor = [245, 158, 11]; // Amber
+                }
+            } else {
+                // No limit: compare to Total Expense as fallback (visual only)
+                percentage = Math.min((amount / (totalExpense || 1)), 1);
+                // Default status logic for unbudgeted
+                if (percentage > 0.4) { // Arbitrary heuristic for "Big Spend"
+                    // label = 'HIGH'; // Optional
+                    statusColor = [59, 130, 246]; // Blue for neutral/info
+                }
             }
 
             doc.setFontSize(10);
             doc.setTextColor(71, 85, 105);
             doc.text(cat, 14, yPos);
 
-            // Amount
-            doc.text(formatCurrency(amount), 140, yPos, { align: 'right' });
+            // Amount / Limit
+            doc.setFontSize(10);
+            doc.setTextColor(15, 23, 42);
+            const amountText = formatCurrency(amount);
+            const limitText = limit > 0 ? ` / ${formatCurrency(limit)}` : '';
+            doc.text(amountText, 140, yPos, { align: 'right' });
+
+            if (limit > 0) {
+                doc.setTextColor(148, 163, 184); // Lighter for limit
+                doc.text(limitText, 140 + doc.getStringUnitWidth(amountText) * 3.5, yPos); // Approx offset
+                // Better alignment: Just right align the constructed string?
+                // Actually, let's right align the whole string to 160 or similar.
+            }
+
+            // Re-draw amount perfectly aligned
+            doc.setFillColor(255, 255, 255);
+            doc.rect(110, yPos - 4, 60, 6, 'F'); // Clear previous
+
+            doc.setTextColor(15, 23, 42);
+            const fullText = limit > 0 ? `${formatCurrency(amount)} / ${formatCurrency(limit)}` : formatCurrency(amount);
+            doc.text(fullText, 160, yPos, { align: 'right' }); // Moved x to 160 to give space
 
             // Status Pill/Text
             doc.setFontSize(8);
