@@ -94,7 +94,7 @@ const Reports: React.FC = () => {
     // Header
     doc.setFontSize(24);
     doc.setTextColor(100, 116, 139); // Gray title like screenshot
-    doc.text('FinMate Financial Report', 105, 20, { align: 'center' });
+    doc.text('FinMate Financial Report (v2)', 105, 20, { align: 'center' });
 
     doc.setFontSize(10);
     doc.setTextColor(148, 163, 184); // Lighter gray
@@ -295,7 +295,7 @@ const Reports: React.FC = () => {
       doc.text(`${i}/${pageCount}`, 200, 290, { align: 'right' });
     }
 
-    doc.save('FinMate_Report.pdf');
+    doc.save('FinMate_Report_v2.pdf');
   };
 
   return (
