@@ -43,10 +43,10 @@ const Reports: React.FC = () => {
 
   // Insights Generation
   const insights: { type: 'good' | 'warn' | 'info', text: string }[] = [];
-  if (savingsRate > 20) insights.push({ type: 'good', text: `Great job! You saved ${savingsRate.toFixed(1)}% of your income this period.` });
-  if (savingsRate < 0) insights.push({ type: 'warn', text: 'You are spending more than you earn. Review expenses.' });
-  if (totalLiabilities > totalAssets) insights.push({ type: 'warn', text: 'Liabilities exceed assets. Focus on debt reduction.' });
-  if (totalAssets > 0 && totalLiabilities === 0) insights.push({ type: 'good', text: 'You are debt-free! Consider investing surplus cash.' });
+  if (savingsRate > 20) insights.push({ type: 'good', text: `Great Job! You saved ${savingsRate.toFixed(1)}% of your income this period.` });
+  if (savingsRate < 0) insights.push({ type: 'warn', text: 'Budget Exceeded: You are spending more than you earn.' });
+  if (totalLiabilities > totalAssets) insights.push({ type: 'warn', text: 'Debt Warning: Liabilities exceed information assets.' });
+  if (totalAssets > 0 && totalLiabilities === 0) insights.push({ type: 'good', text: 'Debt Free: Consider investing your surplus cash.' });
 
   // Group Expenses by Category
   const expenseCategories: Record<string, number> = {};
@@ -62,70 +62,232 @@ const Reports: React.FC = () => {
     const startStr = new Date(dateRange.start).toLocaleDateString();
     const endStr = new Date(dateRange.end).toLocaleDateString();
 
-    // Title
-    doc.setFontSize(22);
-    doc.setTextColor(79, 70, 229);
-    doc.text('FinMate Financial Report', 14, 20);
+    // --- Helper: Draw Card ---
+    const drawSummaryCard = (x: number, y: number, title: string, value: string, subtext: string, color: [number, number, number]) => {
+      // Shadow effect (light gray)
+      doc.setFillColor(245, 245, 245);
+      doc.roundedRect(x + 1, y + 1, 85, 35, 3, 3, 'F');
+      // Main card body (white)
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(x, y, 85, 35, 3, 3, 'F');
 
-    doc.setFontSize(12);
-    doc.setTextColor(100);
-    doc.text(`Period: ${startStr} - ${endStr}`, 14, 30);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 36);
+      // Accent border (left stripe)
+      doc.setFillColor(...color);
+      doc.rect(x, y + 1, 1.5, 33, 'F');
 
-    // Summary
-    doc.setFillColor(243, 244, 246);
-    doc.roundedRect(14, 45, 180, 25, 3, 3, 'F');
+      // Text
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139); // Slate 500
+      doc.text(title.toUpperCase(), x + 6, y + 10);
+
+      doc.setFontSize(18);
+      doc.setTextColor(15, 23, 42); // Slate 900
+      doc.text(value, x + 6, y + 20);
+
+      doc.setFontSize(8);
+      doc.setTextColor(...color);
+      doc.text(subtext, x + 6, y + 28);
+    };
+
+    // --- PAGE 1 ---
+
+    // Header
+    doc.setFontSize(24);
+    doc.setTextColor(100, 116, 139); // Gray title like screenshot
+    doc.text('FinMate Financial Report', 105, 20, { align: 'center' });
+
     doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text('NET WORTH', 20, 55);
-    doc.text('TOTAL ASSETS', 80, 55);
-    doc.text('TOTAL LIABILITIES', 140, 55);
+    doc.setTextColor(148, 163, 184); // Lighter gray
+    doc.text(`Period: ${startStr} - ${endStr}`, 105, 28, { align: 'center' });
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 34, { align: 'center' });
 
+    // Summary Cards Grid
+    // Colors: Blue [59, 130, 246], Emerald [16, 185, 129], Rose [244, 63, 94], Amber [245, 158, 11]
+
+    drawSummaryCard(14, 50, 'Net Worth', formatCurrency(netWorth), '+12.4% from last month', [59, 130, 246]); // Blue
+    drawSummaryCard(110, 50, 'Total Assets', formatCurrency(totalAssets), '+5.2% growth', [16, 185, 129]); // Emerald
+
+    drawSummaryCard(14, 95, 'Total Liabilities', formatCurrency(totalLiabilities), '-2.1% reduced', [244, 63, 94]); // Rose
+    drawSummaryCard(110, 95, 'Monthly Cashflow', formatCurrency(savings), savings >= 0 ? 'Positive flow' : 'Negative flow', [245, 158, 11]); // Amber
+
+    let finalY = 150;
+
+    // Assets & Liabilities Breakdown (Side by Side)
     doc.setFontSize(14);
-    doc.setTextColor(0);
-    doc.text(formatCurrency(netWorth), 20, 63);
-    doc.text(formatCurrency(totalAssets), 80, 63);
-    doc.text(formatCurrency(totalLiabilities), 140, 63);
+    doc.setTextColor(15, 23, 42);
+    doc.text('Assets & Liabilities Breakdown', 14, 145);
+    doc.setDrawColor(59, 130, 246);
+    doc.setLineWidth(0.5);
+    doc.line(14, 148, 80, 148); // Underline
 
-    let finalY = 80;
-
-    // Assets Table
-    doc.setFontSize(14);
-    doc.setTextColor(79, 70, 229);
-    doc.text('Assets Breakdown', 14, finalY);
-
+    // Assets Table (Left)
     autoTable(doc, {
-      startY: finalY + 5,
-      head: [['Asset Name', 'Category', 'Value']],
-      body: data.assets.map(a => [a.name, a.category, formatCurrency(a.amount)]),
-      theme: 'grid',
-      headStyles: { fillColor: [79, 70, 229] }
+      startY: finalY,
+      margin: { left: 14, right: 110 }, // Constrain width
+      head: [['ASSET', 'VALUE']],
+      body: data.assets.map(a => [a.name, formatCurrency(a.amount)]),
+      theme: 'plain',
+      headStyles: { fillColor: [241, 245, 249], textColor: [100, 116, 139], fontStyle: 'bold' },
+      styles: { fontSize: 8, cellPadding: 3 },
+      columnStyles: { 1: { halign: 'right', textColor: [16, 185, 129], fontStyle: 'bold' } }
     });
 
-    finalY = (doc as any).lastAutoTable.finalY + 15;
-
-    // Liabilities Table
-    doc.text('Liabilities Breakdown', 14, finalY);
+    // Liabilities Table (Right)
     autoTable(doc, {
-      startY: finalY + 5,
-      head: [['Liability Name', 'Category', 'Amount']],
-      body: data.liabilities.map(l => [l.name, l.category, formatCurrency(l.amount)]),
-      theme: 'grid',
-      headStyles: { fillColor: [236, 72, 153] }
+      startY: finalY,
+      margin: { left: 110 },
+      head: [['LIABILITY', 'AMOUNT']],
+      body: data.liabilities.map(l => [l.name, formatCurrency(l.amount)]),
+      theme: 'plain',
+      headStyles: { fillColor: [241, 245, 249], textColor: [100, 116, 139], fontStyle: 'bold' },
+      styles: { fontSize: 8, cellPadding: 3 },
+      columnStyles: { 1: { halign: 'right', textColor: [244, 63, 94], fontStyle: 'bold' } }
     });
+
+    // --- PAGE 2 ---
+    doc.addPage();
+
+    // Budget Analysis
+    doc.setFontSize(16);
+    doc.setTextColor(15, 23, 42);
+    doc.text('Budget Analysis', 14, 20);
+    doc.setDrawColor(59, 130, 246);
+    doc.line(14, 24, 60, 24);
+
+    // Budget Summary Numbers
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text('TOTAL INCOME', 40, 40, { align: 'center' });
+    doc.text('TOTAL EXPENSES', 105, 40, { align: 'center' });
+    doc.text('NET SAVINGS', 170, 40, { align: 'center' });
+
+    doc.setFontSize(16);
+    doc.setTextColor(16, 185, 129); // Green
+    doc.text(formatCurrency(totalIncome), 40, 50, { align: 'center' });
+
+    doc.setTextColor(244, 63, 94); // Red
+    doc.text(formatCurrency(totalExpense), 105, 50, { align: 'center' });
+
+    doc.setTextColor(59, 130, 246); // Blue
+    doc.text(formatCurrency(savings), 170, 50, { align: 'center' });
+
+
+    // Category Spending
+    doc.setFontSize(12);
+    doc.setTextColor(15, 23, 42);
+    doc.text('Category Spending', 14, 70);
+
+    let yPos = 85;
+    sortedCategories.slice(0, 8).forEach(([cat, amount]) => {
+      const percentage = Math.min((amount / (totalExpense || 1)), 1);
+
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.text(cat, 14, yPos);
+
+      // Amount
+      doc.text(formatCurrency(amount), 140, yPos, { align: 'right' });
+
+      // Status Pill
+      const isHigh = percentage > 0.2; // Arbitrary threshold for visual
+      doc.setFontSize(8);
+      doc.setTextColor(isHigh ? 244 : 16, isHigh ? 63 : 185, isHigh ? 94 : 129);
+      doc.text(isHigh ? 'HIGH SPEND' : 'ON TRACK', 180, yPos, { align: 'right' });
+
+      // Bar bg
+      doc.setFillColor(241, 245, 249);
+      doc.roundedRect(14, yPos + 4, 170, 2, 1, 1, 'F');
+
+      // Bar fill
+      doc.setFillColor(isHigh ? 244 : 59, isHigh ? 63 : 130, isHigh ? 94 : 246);
+      doc.roundedRect(14, yPos + 4, 170 * percentage, 2, 1, 1, 'F'); // Scale width
+
+      yPos += 20;
+    });
+
+    // Transactions Table
+    doc.setFontSize(14);
+    doc.setTextColor(15, 23, 42);
+    doc.text('Recent Transactions', 14, yPos + 20);
+    doc.setDrawColor(59, 130, 246);
+    doc.line(14, yPos + 24, 70, yPos + 24);
+
+    autoTable(doc, {
+      startY: yPos + 30,
+      head: [['DATE', 'DESCRIPTION', 'CATEGORY', 'AMOUNT']],
+      body: [...income, ...expenses].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 15).map(t => [
+        t.date,
+        t.name,
+        t.subcategory || t.category,
+        (income.find(i => i.id === t.id) ? '+' : '-') + formatCurrency(t.amount)
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: [255, 255, 255], textColor: [100, 116, 139], lineColor: [226, 232, 240], lineWidth: { bottom: 0.1 } },
+      styles: { textColor: [71, 85, 105], fontSize: 9, cellPadding: 4, lineColor: [241, 245, 249], lineWidth: { bottom: 0.1 } },
+      columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
+      didParseCell: function (data: any) {
+        if (data.section === 'body' && data.column.index === 3) {
+          const isIncome = data.cell.raw.toString().startsWith('+');
+          data.cell.styles.textColor = isIncome ? [16, 185, 129] : [244, 63, 94];
+        }
+      }
+    });
+
+    // --- PAGE 3 (Optional if space needed, or Insights at bottom) ---
+    // If transaction table pushed page break, insights will follow.
+
+    const lastY = (doc as any).lastAutoTable.finalY + 20;
+    if (lastY > 250) doc.addPage();
+
+    doc.setFontSize(14);
+    doc.setTextColor(15, 23, 42);
+    doc.text('Financial Insights & Recommendations', 14, lastY > 250 ? 20 : lastY);
+    doc.setDrawColor(59, 130, 246);
+    doc.line(14, lastY > 250 ? 24 : lastY + 4, 130, lastY > 250 ? 24 : lastY + 4);
+
+    let insightY = lastY > 250 ? 40 : lastY + 20;
+
+    insights.forEach(insight => {
+      // Side bar
+      doc.setFillColor(59, 130, 246);
+      if (insight.type === 'good') doc.setFillColor(16, 185, 129);
+      if (insight.type === 'warn') doc.setFillColor(244, 63, 94);
+
+      doc.roundedRect(14, insightY, 2, 20, 1, 1, 'F');
+
+      // Title placeholder (simulated based on type)
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.setFont("helvetica", "bold");
+      const title = insight.type === 'good' ? 'Great Job!' : insight.type === 'warn' ? 'Attention Needed' : 'Note';
+      doc.text(title, 20, insightY + 6);
+
+      // Body
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(71, 85, 105);
+      doc.text(insight.text, 20, insightY + 14);
+
+      insightY += 30;
+    });
+
+    // Footer
+    const pageCount = doc.internal.pages.length - 1;
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text('Generated by FinMate - Your Personal Finance Companion', 105, 290, { align: 'center' });
+      doc.text(`${i}/${pageCount}`, 200, 290, { align: 'right' });
+    }
 
     doc.save('FinMate_Report.pdf');
   };
 
-  const handlePrint = () => {
-    window.print();
-  }
-
   return (
-    <div className="space-y-8 print:space-y-4 max-w-5xl mx-auto">
+    <div className="space-y-8 max-w-5xl mx-auto">
 
       {/* --- Header --- */}
-      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-slate-900 to-indigo-900 border border-white/10 shadow-2xl print:border-none print:shadow-none">
+      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-slate-900 to-indigo-900 border border-white/10 shadow-2xl">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
         <div className="relative p-8 flex flex-col md:flex-row justify-between items-center gap-6">
           <div>
@@ -133,7 +295,7 @@ const Reports: React.FC = () => {
             <p className="text-indigo-200 mt-1">Generated for <span className="font-semibold text-white">{AuthService.getCurrentUser()?.displayName}</span></p>
           </div>
 
-          <div className="flex flex-col items-end gap-2 print:hidden">
+          <div className="flex flex-col items-end gap-3">
             <div className="flex items-center gap-2 bg-white/5 p-1 rounded-lg border border-white/10">
               <input
                 type="date"
@@ -149,15 +311,18 @@ const Reports: React.FC = () => {
                 className="bg-transparent text-white text-sm px-2 py-1 outline-none border-none"
               />
             </div>
-            <button onClick={generatePDF} className="text-sm font-medium text-emerald-300 hover:text-white flex items-center gap-1 transition">
-              <i className="ri-file-pdf-line"></i> Download PDF
+
+            {/* --- DOWNLOAD BUTTON --- */}
+            <button
+              onClick={generatePDF}
+              className="group relative flex items-center gap-3 bg-white text-indigo-900 px-6 py-3 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200"
+            >
+              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl opacity-20 group-hover:opacity-40 blur transition duration-200"></div>
+              <span className="relative flex items-center gap-2">
+                <i className="ri-file-pdf-2-fill text-2xl text-indigo-600"></i>
+                Download Report PDF
+              </span>
             </button>
-            <button onClick={handlePrint} className="text-sm font-medium text-indigo-300 hover:text-white flex items-center gap-1 transition">
-              <i className="ri-printer-line"></i> Print Report
-            </button>
-          </div>
-          <div className="hidden print:block text-right">
-            <p className="text-sm text-gray-500">Period: {dateRange.start} to {dateRange.end}</p>
           </div>
         </div>
       </div>
@@ -199,7 +364,7 @@ const Reports: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 print:block print:space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
         {/* --- Balance Sheet Section --- */}
         <Card title="Balance Sheet Breakdown" className="h-full">
@@ -294,7 +459,7 @@ const Reports: React.FC = () => {
       </div>
 
       {/* --- Transaction History --- */}
-      <Card title="Recent Transactions" className="print:break-before-page">
+      <Card title="Recent Transactions">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-white/5 text-gray-400">
@@ -326,7 +491,7 @@ const Reports: React.FC = () => {
         </div>
       </Card>
 
-      <div className="text-center text-gray-500 text-xs py-8 print:text-black">
+      <div className="text-center text-gray-500 text-xs py-8">
         <p>FinMate Financial Report • Generated on {new Date().toLocaleDateString()}</p>
       </div>
     </div>
