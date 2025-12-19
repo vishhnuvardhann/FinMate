@@ -29,7 +29,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { path: '/', label: 'Dashboard', icon: 'ri-dashboard-line' },
     { path: '/budget-planner', label: 'Budget Planner', icon: 'ri-money-cny-circle-line' },
     { path: '/budget', label: 'Transactions', icon: 'ri-wallet-3-line' },
-    { path: '/balance', label: 'Balance Sheet', icon: 'ri-scales-3-line' },
+    { path: '/balance', label: 'Net Worth Sheet', icon: 'ri-scales-3-line' },
     { path: '/forecasting', label: 'Forecasting', icon: 'ri-line-chart-line' },
     { path: '/emis', label: 'Bills & EMI', icon: 'ri-calendar-check-line' },
     { path: '/reports', label: 'Reports', icon: 'ri-file-list-3-line' },
