@@ -320,33 +320,31 @@ const ReportsV2: React.FC = () => {
                 doc.setTextColor(51, 65, 85);
                 doc.text(cat.toUpperCase(), 18, currentY + 8);
 
-                // Right Side: Spent / Limit
+                // Right Side: Detailed Stats
                 doc.setFont("helvetica", "normal");
-                let statusText = '';
-                let statusColor: [number, number, number] = [100, 116, 139];
 
                 if (catLimit > 0) {
-                    const pct = totalSpent / catLimit;
-                    if (pct > 1) { statusText = 'EXCEEDED'; statusColor = [244, 63, 94]; }
-                    else if (pct > 0.85) { statusText = 'NEAR LIMIT'; statusColor = [245, 158, 11]; }
-                    else { statusText = 'GOOD'; statusColor = [16, 185, 129]; }
+                    const remaining = catLimit - totalSpent;
+                    const isOver = remaining < 0;
 
-                    doc.setTextColor(15, 23, 42);
-                    doc.text(`${formatCurrency(totalSpent)} / ${formatCurrency(catLimit)}`, 140, currentY + 8, { align: 'right' });
-
+                    // Budget
                     doc.setFontSize(8);
-                    doc.setTextColor(...statusColor);
-                    doc.text(statusText, 170, currentY + 8, { align: 'right' });
+                    doc.setTextColor(100, 116, 139);
+                    doc.text(`Budget: ${formatCurrency(catLimit)}`, 100, currentY + 8, { align: 'right' });
 
-                    // Mini bar
-                    doc.setFillColor(226, 232, 240);
-                    doc.rect(175, currentY + 4, 15, 4, 'F');
-                    doc.setFillColor(...statusColor);
-                    doc.rect(175, currentY + 4, Math.min(pct, 1) * 15, 4, 'F');
+                    // Spent
+                    doc.text(`Spent: ${formatCurrency(totalSpent)}`, 140, currentY + 8, { align: 'right' });
+
+                    // Remaining
+                    doc.setTextColor(isOver ? 244 : 16, isOver ? 63 : 185, isOver ? 94 : 129); // Red or Green
+                    doc.setFont("helvetica", "bold");
+                    doc.text(`${isOver ? 'Exceeded' : 'Remaining'}: ${formatCurrency(Math.abs(remaining))}`, 185, currentY + 8, { align: 'right' });
 
                 } else {
+                    // No limit - just show spent
+                    doc.setFontSize(9);
                     doc.setTextColor(15, 23, 42);
-                    doc.text(`${formatCurrency(totalSpent)}`, 140, currentY + 8, { align: 'right' });
+                    doc.text(`Total Spent: ${formatCurrency(totalSpent)}`, 185, currentY + 8, { align: 'right' });
                 }
 
                 // Transaction Table for Category
