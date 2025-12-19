@@ -12,6 +12,10 @@ const BudgetPlanner: React.FC = () => {
     // Category limits state: Map category name -> limit amount
     const [categoryLimits, setCategoryLimits] = useState<Record<string, number>>({});
 
+    const [newCategory, setNewCategory] = useState('');
+    const [newCategoryLimit, setNewCategoryLimit] = useState('');
+    const [sortOption, setSortOption] = useState<'name' | 'limit' | 'spent' | 'status'>('name');
+
     useEffect(() => {
         const fetchData = async () => {
             const user = AuthService.getCurrentUser();
@@ -75,6 +79,20 @@ const BudgetPlanner: React.FC = () => {
         saveBudget(monthlyBudget, newLimits);
     };
 
+    const handleManualAddCategory = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newCategory || !data) return;
+
+        // Add to limits
+        const amount = parseFloat(newCategoryLimit) || 0;
+        const newLimits = { ...categoryLimits, [newCategory]: amount };
+        setCategoryLimits(newLimits);
+        saveBudget(monthlyBudget, newLimits);
+
+        setNewCategory('');
+        setNewCategoryLimit('');
+    };
+
     const changeMonth = (offset: number) => {
         const newDate = new Date(currentDate);
         newDate.setMonth(newDate.getMonth() + offset);
@@ -89,8 +107,29 @@ const BudgetPlanner: React.FC = () => {
     const currentMonthExpenses = data.expenses.filter(e => e.date.startsWith(currentMonthStr));
     const totalActualExpense = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-    // Get unique categories from history
-    const allCategories = Array.from(new Set(data.expenses.map(e => e.subcategory).filter((c): c is string => !!c))).sort();
+    // Get unique categories (both from expenses AND existing limits)
+    const expenseCategories = new Set<string>(data.expenses.map(e => e.subcategory).filter((c): c is string => !!c));
+    const limitCategories = Object.keys(categoryLimits);
+    const allCategoriesSet = new Set<string>([...expenseCategories, ...limitCategories]);
+
+    // Convert to array and Sort
+    const sortedCategories = Array.from(allCategoriesSet).sort((a: string, b: string) => {
+        const limitA = categoryLimits[a] || 0;
+        const limitB = categoryLimits[b] || 0;
+        const spentA = currentMonthExpenses.filter(e => e.subcategory === a).reduce((sum, e) => sum + e.amount, 0);
+        const spentB = currentMonthExpenses.filter(e => e.subcategory === b).reduce((sum, e) => sum + e.amount, 0);
+
+        switch (sortOption) {
+            case 'limit': return limitB - limitA; // High to Low
+            case 'spent': return spentB - spentA; // High to Low
+            case 'status': {
+                const statusA = limitA > 0 ? spentA / limitA : 0;
+                const statusB = limitB > 0 ? spentB / limitB : 0;
+                return statusB - statusA; // Overbudget first
+            }
+            default: return a.localeCompare(b); // Name A-Z
+        }
+    });
 
     return (
         <div className="space-y-6">
@@ -177,13 +216,53 @@ const BudgetPlanner: React.FC = () => {
                     </div>
                 </Card>
 
-                <Card title="Category Breakdown (A-Z)" className="h-fit">
-                    <p className="text-xs text-gray-400 mb-4">Set specific limits for each category to better manage expenses.</p>
+                <Card title="Category Breakdown" className="h-fit">
+
+                    {/* Add Category Form */}
+                    <form onSubmit={handleManualAddCategory} className="mb-6 flex gap-2">
+                        <div className="flex-1">
+                            <input
+                                value={newCategory}
+                                onChange={e => setNewCategory(e.target.value)}
+                                placeholder="Add Category..."
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                            />
+                        </div>
+                        <div className="w-24">
+                            <input
+                                type="number"
+                                value={newCategoryLimit}
+                                onChange={e => setNewCategoryLimit(e.target.value)}
+                                placeholder="Limit"
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                            />
+                        </div>
+                        <button type="submit" className="p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition">
+                            <i className="ri-add-line"></i>
+                        </button>
+                    </form>
+
+                    <div className="flex justify-between items-center mb-4">
+                        <p className="text-xs text-gray-400">Manage category limits</p>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500">Sort by:</span>
+                            <select
+                                value={sortOption}
+                                onChange={(e) => setSortOption(e.target.value as any)}
+                                className="bg-white/5 border border-white/10 rounded text-xs px-2 py-1 text-gray-300 focus:outline-none hover:bg-white/10"
+                            >
+                                <option className="bg-slate-800" value="name">Name</option>
+                                <option className="bg-slate-800" value="limit">Limit (High)</option>
+                                <option className="bg-slate-800" value="spent">Spent (High)</option>
+                                <option className="bg-slate-800" value="status">Over Budget</option>
+                            </select>
+                        </div>
+                    </div>
 
                     <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                        {allCategories.length === 0 && <p className="text-sm text-gray-500 italic">No expense categories found. Add expenses to see them here.</p>}
+                        {sortedCategories.length === 0 && <p className="text-sm text-gray-500 italic">No expense categories found. Add expenses to see them here.</p>}
 
-                        {allCategories.map(cat => {
+                        {sortedCategories.map(cat => {
                             const limit = categoryLimits[cat] || 0;
                             const spent = currentMonthExpenses.filter(e => e.subcategory === cat).reduce((sum, e) => sum + e.amount, 0);
                             const isOver = limit > 0 && spent > limit;
