@@ -259,37 +259,115 @@ const ReportsV2: React.FC = () => {
             yPos += 20;
         });
 
-        // Transactions Table
-        doc.setFontSize(14);
-        doc.setTextColor(15, 23, 42);
-        doc.text('Recent Transactions', 14, yPos + 20);
-        doc.setDrawColor(59, 130, 246);
-        doc.line(14, yPos + 24, 70, yPos + 24);
+        // --- Transactions Section ---
+        const transactionStartY = yPos + 30;
 
-        autoTable(doc, {
-            startY: yPos + 30,
-            head: [['DATE', 'DESCRIPTION', 'CATEGORY', 'AMOUNT']],
-            body: [...income, ...expenses].sort((a, b) => {
-                const catA = a.subcategory || a.category || '';
-                const catB = b.subcategory || b.category || '';
-                return catA.localeCompare(catB) || b.date.localeCompare(a.date);
-            }).map(t => [
-                t.date,
-                t.name,
-                t.subcategory || t.category,
-                (income.find(i => i.id === t.id) ? '+' : '-') + formatCurrency(t.amount)
-            ]),
-            theme: 'grid',
-            headStyles: { fillColor: [255, 255, 255], textColor: [100, 116, 139], lineColor: [226, 232, 240], lineWidth: { bottom: 0.1 } },
-            styles: { textColor: [71, 85, 105], fontSize: 9, cellPadding: 4, lineColor: [241, 245, 249], lineWidth: { bottom: 0.1 } },
-            columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
-            didParseCell: function (data: any) {
-                if (data.section === 'body' && data.column.index === 3) {
-                    const isIncome = data.cell.raw.toString().startsWith('+');
-                    data.cell.styles.textColor = isIncome ? [16, 185, 129] : [244, 63, 94];
+        // 1. Income Section (if exists)
+        let currentY = transactionStartY;
+
+        if (income.length > 0) {
+            if (currentY + 30 > 280) { doc.addPage(); currentY = 20; }
+
+            doc.setFontSize(14);
+            doc.setTextColor(15, 23, 42);
+            doc.text('Income Sources', 14, currentY);
+            doc.setDrawColor(16, 185, 129); // Green underline
+            doc.line(14, currentY + 4, 60, currentY + 4);
+
+            autoTable(doc, {
+                startY: currentY + 10,
+                head: [['DATE', 'SOURCE', 'AMOUNT']],
+                body: income.sort((a, b) => b.date.localeCompare(a.date)).map(t => [
+                    t.date,
+                    t.name,
+                    `+${formatCurrency(t.amount)}`
+                ]),
+                theme: 'grid',
+                headStyles: { fillColor: [241, 245, 249], textColor: [100, 116, 139] },
+                columnStyles: { 2: { halign: 'right', textColor: [16, 185, 129], fontStyle: 'bold' } },
+                styles: { fontSize: 9, cellPadding: 3 }
+            });
+
+            currentY = (doc as any).lastAutoTable.finalY + 20;
+        }
+
+        // 2. Expenses by Category
+        if (expenses.length > 0) {
+            if (currentY + 30 > 280) { doc.addPage(); currentY = 20; }
+
+            doc.setFontSize(14);
+            doc.setTextColor(15, 23, 42);
+            doc.text('Expense Breakdown', 14, currentY);
+            doc.setDrawColor(244, 63, 94); // Red/Rose underline
+            doc.line(14, currentY + 4, 70, currentY + 4);
+
+            currentY += 15;
+
+            // Loop through sorted categories
+            sortedCategories.forEach(([cat, totalSpent]) => {
+                const catLimit = categoryLimits[cat] || 0;
+                const catTransactions = expenses.filter(e => (e.subcategory || 'General') === cat);
+
+                // Check for page break
+                if (currentY + 40 > 280) { doc.addPage(); currentY = 20; }
+
+                // Category Header
+                doc.setFillColor(248, 250, 252);
+                doc.roundedRect(14, currentY, 182, 12, 1, 1, 'F');
+
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(51, 65, 85);
+                doc.text(cat.toUpperCase(), 18, currentY + 8);
+
+                // Right Side: Spent / Limit
+                doc.setFont("helvetica", "normal");
+                let statusText = '';
+                let statusColor: [number, number, number] = [100, 116, 139];
+
+                if (catLimit > 0) {
+                    const pct = totalSpent / catLimit;
+                    if (pct > 1) { statusText = 'EXCEEDED'; statusColor = [244, 63, 94]; }
+                    else if (pct > 0.85) { statusText = 'NEAR LIMIT'; statusColor = [245, 158, 11]; }
+                    else { statusText = 'GOOD'; statusColor = [16, 185, 129]; }
+
+                    doc.setTextColor(15, 23, 42);
+                    doc.text(`${formatCurrency(totalSpent)} / ${formatCurrency(catLimit)}`, 140, currentY + 8, { align: 'right' });
+
+                    doc.setFontSize(8);
+                    doc.setTextColor(...statusColor);
+                    doc.text(statusText, 170, currentY + 8, { align: 'right' });
+
+                    // Mini bar
+                    doc.setFillColor(226, 232, 240);
+                    doc.rect(175, currentY + 4, 15, 4, 'F');
+                    doc.setFillColor(...statusColor);
+                    doc.rect(175, currentY + 4, Math.min(pct, 1) * 15, 4, 'F');
+
+                } else {
+                    doc.setTextColor(15, 23, 42);
+                    doc.text(`${formatCurrency(totalSpent)}`, 140, currentY + 8, { align: 'right' });
                 }
-            }
-        });
+
+                // Transaction Table for Category
+                autoTable(doc, {
+                    startY: currentY + 14,
+                    head: [['DATE', 'DESCRIPTION', 'AMOUNT']],
+                    body: catTransactions.sort((a, b) => b.date.localeCompare(a.date)).map(t => [
+                        t.date,
+                        t.name,
+                        `-${formatCurrency(t.amount)}`
+                    ]),
+                    theme: 'plain',
+                    headStyles: { fontSize: 8, textColor: [148, 163, 184], fontStyle: 'bold' },
+                    columnStyles: { 2: { halign: 'right', textColor: [51, 65, 85] } },
+                    styles: { fontSize: 9, cellPadding: 2, textColor: [71, 85, 105] },
+                    margin: { left: 14 } // Indent slightly?
+                });
+
+                currentY = (doc as any).lastAutoTable.finalY + 10;
+            });
+        }
 
         // --- PAGE 3 (Optional if space needed, or Insights at bottom) ---
         // If transaction table pushed page break, insights will follow.
