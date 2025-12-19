@@ -9,9 +9,18 @@ import autoTable from 'jspdf-autotable';
 
 const ReportsV2: React.FC = () => {
     const [data, setData] = useState<AppData | null>(null);
+
+    // Helper to safely get local YYYY-MM-DD
+    const getLocalDate = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     const [dateRange, setDateRange] = useState({
-        start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-        end: new Date().toISOString().split('T')[0]
+        start: getLocalDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
+        end: getLocalDate(new Date())
     });
 
     useEffect(() => {
@@ -100,6 +109,17 @@ const ReportsV2: React.FC = () => {
         doc.setTextColor(148, 163, 184); // Lighter gray
         doc.text(`Period: ${startStr} - ${endStr}`, 105, 28, { align: 'center' });
         doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 34, { align: 'center' });
+
+        // Debug info for User
+        if (budgetPlan) {
+            doc.setFontSize(8);
+            doc.setTextColor(16, 185, 129); // Green
+            doc.text(`Active Budget Found: ${budgetPlan.month}`, 105, 40, { align: 'center' });
+        } else {
+            doc.setFontSize(8);
+            doc.setTextColor(244, 63, 94); // Red
+            doc.text(`No Budget Plan found for ${reportMonth}`, 105, 40, { align: 'center' });
+        }
 
         // Summary Cards Grid
         // Colors: Blue [59, 130, 246], Emerald [16, 185, 129], Rose [244, 63, 94], Amber [245, 158, 11]
