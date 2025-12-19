@@ -27,8 +27,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: 'ri-dashboard-line' },
-    { path: '/budget', label: 'Transactions', icon: 'ri-wallet-3-line' },
     { path: '/budget-planner', label: 'Budget Planner', icon: 'ri-money-cny-circle-line' },
+    { path: '/budget', label: 'Transactions', icon: 'ri-wallet-3-line' },
     { path: '/balance', label: 'Balance Sheet', icon: 'ri-scales-3-line' },
     { path: '/forecasting', label: 'Forecasting', icon: 'ri-line-chart-line' },
     { path: '/emis', label: 'Bills & EMI', icon: 'ri-calendar-check-line' },
@@ -72,8 +72,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               key={item.path}
               onClick={() => handleNav(item.path)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${location.pathname === item.path
-                  ? 'bg-primary/20 text-indigo-300 border border-primary/20 shadow-inner'
-                  : 'hover:bg-white/5 text-gray-400 hover:text-white'
+                ? 'bg-primary/20 text-indigo-300 border border-primary/20 shadow-inner'
+                : 'hover:bg-white/5 text-gray-400 hover:text-white'
                 }`}
             >
               <i className={`${item.icon} text-xl ${location.pathname === item.path ? 'text-indigo-400' : 'text-gray-500 group-hover:text-white'}`}></i>
@@ -126,8 +126,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 key={item.path}
                 onClick={() => handleNav(item.path)}
                 className={`w-full flex items-center gap-4 px-4 py-4 rounded-xl text-lg ${location.pathname === item.path
-                    ? 'bg-indigo-600/20 text-indigo-300'
-                    : 'text-gray-400'
+                  ? 'bg-indigo-600/20 text-indigo-300'
+                  : 'text-gray-400'
                   }`}
               >
                 <i className={`${item.icon} text-2xl`}></i>

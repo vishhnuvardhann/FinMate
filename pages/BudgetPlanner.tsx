@@ -302,6 +302,10 @@ const BudgetPlanner: React.FC = () => {
                         {sortedCategoryData.length === 0 && <p className="text-sm text-gray-500 italic">No expense categories found. Add expenses to see them here.</p>}
 
                         {sortedCategoryData.map(({ cat, items, totalLimit, spent, isOver }) => {
+                            // Calculate remaining or exceeded amount
+                            const remaining = totalLimit - spent;
+                            const diffAmount = Math.abs(remaining);
+
                             return (
                                 <div key={cat} className="rounded-lg bg-white/5 border border-white/5 overflow-hidden transition">
                                     {/* Category Header */}
@@ -312,7 +316,10 @@ const BudgetPlanner: React.FC = () => {
                                         <div className="flex items-center gap-2">
                                             {totalLimit > 0 && (
                                                 <span className={`text-xs px-2 py-0.5 rounded ${isOver ? 'bg-red-500/20 text-red-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
-                                                    {isOver ? 'Over Limit' : 'Good'}
+                                                    {isOver
+                                                        ? `Exceeded: ${formatCurrency(diffAmount)}`
+                                                        : `Remaining: ${formatCurrency(remaining)}`
+                                                    }
                                                 </span>
                                             )}
                                         </div>
