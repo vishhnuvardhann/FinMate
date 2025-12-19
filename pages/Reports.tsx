@@ -335,7 +335,7 @@ const Reports: React.FC = () => {
               <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl opacity-20 group-hover:opacity-40 blur transition duration-200"></div>
               <span className="relative flex items-center gap-2">
                 <i className="ri-file-pdf-2-fill text-2xl text-indigo-600"></i>
-                Download Report PDF
+                Download Report PDF (v2)
               </span>
             </button>
           </div>
