@@ -63,7 +63,7 @@ const Reports: React.FC = () => {
     const endStr = new Date(dateRange.end).toLocaleDateString();
 
     // --- Helper: Draw Card ---
-    const drawSummaryCard = (x: number, y: number, title: string, value: string, subtext: string, color: [number, number, number]) => {
+    const drawSummaryCard = (x: number, y: number, title: string, value: string, subtext: string, color: [number, number, number], subtextColor?: [number, number, number]) => {
       // Shadow effect (light gray)
       doc.setFillColor(245, 245, 245);
       doc.roundedRect(x + 1, y + 1, 85, 35, 3, 3, 'F');
@@ -85,7 +85,7 @@ const Reports: React.FC = () => {
       doc.text(value, x + 6, y + 20);
 
       doc.setFontSize(8);
-      doc.setTextColor(...color);
+      doc.setTextColor(...(subtextColor || color));
       doc.text(subtext, x + 6, y + 28);
     };
 
@@ -104,11 +104,11 @@ const Reports: React.FC = () => {
     // Summary Cards Grid
     // Colors: Blue [59, 130, 246], Emerald [16, 185, 129], Rose [244, 63, 94], Amber [245, 158, 11]
 
-    drawSummaryCard(14, 50, 'Net Worth', formatCurrency(netWorth), '+12.4% from last month', [59, 130, 246]); // Blue
+    drawSummaryCard(14, 50, 'Net Worth', formatCurrency(netWorth), '+12.4% from last month', [59, 130, 246], [16, 185, 129]); // Blue card, Green text
     drawSummaryCard(110, 50, 'Total Assets', formatCurrency(totalAssets), '+5.2% growth', [16, 185, 129]); // Emerald
 
     drawSummaryCard(14, 95, 'Total Liabilities', formatCurrency(totalLiabilities), '-2.1% reduced', [244, 63, 94]); // Rose
-    drawSummaryCard(110, 95, 'Monthly Cashflow', formatCurrency(savings), savings >= 0 ? 'Positive flow' : 'Negative flow', [245, 158, 11]); // Amber
+    drawSummaryCard(110, 95, 'Monthly Cashflow', formatCurrency(savings), savings >= 0 ? 'Positive flow' : 'Negative flow', [245, 158, 11], savings >= 0 ? [16, 185, 129] : [244, 63, 94]); // Amber card, Gradient text
 
     let finalY = 150;
 
@@ -124,24 +124,24 @@ const Reports: React.FC = () => {
     autoTable(doc, {
       startY: finalY,
       margin: { left: 14, right: 110 }, // Constrain width
-      head: [['ASSET', 'VALUE']],
-      body: data.assets.map(a => [a.name, formatCurrency(a.amount)]),
+      head: [['ASSET NAME', 'CATEGORY', 'VALUE']],
+      body: data.assets.map(a => [a.name, a.category, formatCurrency(a.amount)]),
       theme: 'plain',
       headStyles: { fillColor: [241, 245, 249], textColor: [100, 116, 139], fontStyle: 'bold' },
       styles: { fontSize: 8, cellPadding: 3 },
-      columnStyles: { 1: { halign: 'right', textColor: [16, 185, 129], fontStyle: 'bold' } }
+      columnStyles: { 2: { halign: 'right', textColor: [16, 185, 129], fontStyle: 'bold' } }
     });
 
     // Liabilities Table (Right)
     autoTable(doc, {
       startY: finalY,
       margin: { left: 110 },
-      head: [['LIABILITY', 'AMOUNT']],
-      body: data.liabilities.map(l => [l.name, formatCurrency(l.amount)]),
+      head: [['LIABILITY NAME', 'CATEGORY', 'AMOUNT']],
+      body: data.liabilities.map(l => [l.name, l.category, formatCurrency(l.amount)]),
       theme: 'plain',
       headStyles: { fillColor: [241, 245, 249], textColor: [100, 116, 139], fontStyle: 'bold' },
       styles: { fontSize: 8, cellPadding: 3 },
-      columnStyles: { 1: { halign: 'right', textColor: [244, 63, 94], fontStyle: 'bold' } }
+      columnStyles: { 2: { halign: 'right', textColor: [244, 63, 94], fontStyle: 'bold' } }
     });
 
     // --- PAGE 2 ---
@@ -181,6 +181,18 @@ const Reports: React.FC = () => {
     sortedCategories.slice(0, 8).forEach(([cat, amount]) => {
       const percentage = Math.min((amount / (totalExpense || 1)), 1);
 
+      // Logic for status based on % of total expense (imperfect without budget limit, but matching visual)
+      let label = 'GOOD';
+      let statusColor: [number, number, number] = [16, 185, 129]; // Green
+
+      if (percentage > 0.4) {
+        label = 'EXCEEDED';
+        statusColor = [244, 63, 94]; // Red
+      } else if (percentage > 0.15) {
+        label = 'ON TRACK';
+        statusColor = [16, 185, 129]; // Green
+      }
+
       doc.setFontSize(10);
       doc.setTextColor(71, 85, 105);
       doc.text(cat, 14, yPos);
@@ -188,19 +200,18 @@ const Reports: React.FC = () => {
       // Amount
       doc.text(formatCurrency(amount), 140, yPos, { align: 'right' });
 
-      // Status Pill
-      const isHigh = percentage > 0.2; // Arbitrary threshold for visual
+      // Status Pill/Text
       doc.setFontSize(8);
-      doc.setTextColor(isHigh ? 244 : 16, isHigh ? 63 : 185, isHigh ? 94 : 129);
-      doc.text(isHigh ? 'HIGH SPEND' : 'ON TRACK', 180, yPos, { align: 'right' });
+      doc.setTextColor(...statusColor);
+      doc.text(label, 180, yPos, { align: 'right' });
 
       // Bar bg
       doc.setFillColor(241, 245, 249);
       doc.roundedRect(14, yPos + 4, 170, 2, 1, 1, 'F');
 
       // Bar fill
-      doc.setFillColor(isHigh ? 244 : 59, isHigh ? 63 : 130, isHigh ? 94 : 246);
-      doc.roundedRect(14, yPos + 4, 170 * percentage, 2, 1, 1, 'F'); // Scale width
+      doc.setFillColor(...statusColor);
+      doc.roundedRect(14, yPos + 4, 170 * (percentage > 1 ? 1 : percentage), 2, 1, 1, 'F'); // Scale width
 
       yPos += 20;
     });
@@ -215,18 +226,16 @@ const Reports: React.FC = () => {
     autoTable(doc, {
       startY: yPos + 30,
       head: [['DATE', 'DESCRIPTION', 'CATEGORY', 'AMOUNT']],
-      body: [...income, ...expenses]
-        .sort((a, b) => {
-          const catA = a.subcategory || a.category || '';
-          const catB = b.subcategory || b.category || '';
-          return catA.localeCompare(catB) || b.date.localeCompare(a.date);
-        })
-        .map(t => [
-          t.date,
-          t.name,
-          t.subcategory || t.category,
-          (income.find(i => i.id === t.id) ? '+' : '-') + formatCurrency(t.amount)
-        ]),
+      body: [...income, ...expenses].sort((a, b) => {
+        const catA = a.subcategory || a.category || '';
+        const catB = b.subcategory || b.category || '';
+        return catA.localeCompare(catB) || b.date.localeCompare(a.date);
+      }).map(t => [
+        t.date,
+        t.name,
+        t.subcategory || t.category,
+        (income.find(i => i.id === t.id) ? '+' : '-') + formatCurrency(t.amount)
+      ]),
       theme: 'grid',
       headStyles: { fillColor: [255, 255, 255], textColor: [100, 116, 139], lineColor: [226, 232, 240], lineWidth: { bottom: 0.1 } },
       styles: { textColor: [71, 85, 105], fontSize: 9, cellPadding: 4, lineColor: [241, 245, 249], lineWidth: { bottom: 0.1 } },
