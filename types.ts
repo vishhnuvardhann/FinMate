@@ -63,6 +63,7 @@ export interface BudgetItem {
   category: string;
   limit: number;
   description?: string; // Optional specific item description (e.g. "Groceries")
+  recurring?: boolean; // New: Auto-rollover to next month
 }
 
 export interface BudgetPlan {

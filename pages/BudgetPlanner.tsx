@@ -16,6 +16,7 @@ const BudgetPlanner: React.FC = () => {
     const [newCategory, setNewCategory] = useState('');
     const [newCategoryLimit, setNewCategoryLimit] = useState('');
     const [newCategoryDesc, setNewCategoryDesc] = useState('');
+    const [newCategoryRecurring, setNewCategoryRecurring] = useState(false);
     const [sortOption, setSortOption] = useState<'name' | 'limit' | 'spent' | 'status'>('name');
 
     useEffect(() => {
@@ -104,7 +105,8 @@ const BudgetPlanner: React.FC = () => {
             id: Math.random().toString(36).substr(2, 9),
             category: newCategory,
             limit: parseFloat(newCategoryLimit) || 0,
-            description: newCategoryDesc
+            description: newCategoryDesc,
+            recurring: newCategoryRecurring
         };
 
         const newItems = [...budgetItems, newItem];
@@ -114,6 +116,7 @@ const BudgetPlanner: React.FC = () => {
         setNewCategory('');
         setNewCategoryLimit('');
         setNewCategoryDesc('');
+        setNewCategoryRecurring(false);
     };
 
     const changeMonth = (offset: number) => {
@@ -266,18 +269,27 @@ const BudgetPlanner: React.FC = () => {
                                     className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
                                 />
                             </div>
-                            <button type="submit" className="p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition">
+                            <button type="submit" className="p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition" title="Add Category">
                                 <i className="ri-add-line"></i>
                             </button>
                         </div>
-                        {/* New Description Input */}
-                        <div className="w-full">
-                            <input
-                                value={newCategoryDesc}
-                                onChange={e => setNewCategoryDesc(e.target.value)}
-                                placeholder="Description (e.g. Groceries)"
-                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-indigo-500"
-                            />
+                        {/* New Description Input & Recurring Toggle */}
+                        <div className="flex gap-2 items-center">
+                            <div className="flex-1">
+                                <input
+                                    value={newCategoryDesc}
+                                    onChange={e => setNewCategoryDesc(e.target.value)}
+                                    placeholder="Description (e.g. Groceries)"
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-indigo-500"
+                                />
+                            </div>
+                            <div
+                                onClick={() => setNewCategoryRecurring(!newCategoryRecurring)}
+                                className={`cursor-pointer px-3 py-1.5 rounded-lg border text-xs flex items-center gap-1 select-none transition ${newCategoryRecurring ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300' : 'bg-white/5 border-white/10 text-gray-400'}`}
+                            >
+                                <i className={`ri-refresh-line ${newCategoryRecurring ? 'animate-spin-slow' : ''}`}></i>
+                                <span>Recurring</span>
+                            </div>
                         </div>
                     </form>
 
@@ -344,8 +356,11 @@ const BudgetPlanner: React.FC = () => {
                                         <div className="border-t border-white/5">
                                             {items.map(item => (
                                                 <div key={item.id} className="flex justify-between items-center p-3 hover:bg-white/5 text-sm">
-                                                    <span className="text-gray-300 pl-4 border-l-2 border-indigo-500/30">
+                                                    <span className="text-gray-300 pl-4 border-l-2 border-indigo-500/30 flex items-center gap-2">
                                                         {item.description || 'General'}
+                                                        {item.recurring && (
+                                                            <i className="ri-refresh-line text-indigo-400 text-xs" title="Recurring Budget"></i>
+                                                        )}
                                                     </span>
                                                     <input
                                                         type="number"
@@ -395,7 +410,7 @@ const BudgetPlanner: React.FC = () => {
                 </div>
             </Card>
 
-        </div>
+        </div >
     );
 };
 

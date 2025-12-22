@@ -35,6 +35,8 @@ export const DataService = {
 
     // Check for recurring transactions upon init
     await DataService.checkRecurringTransactions(userId);
+    // Check for recurring budget plans
+    await DataService.checkRecurringBudgets(userId);
   },
 
   load: async (userId: string): Promise<AppData> => {
@@ -144,5 +146,41 @@ export const DataService = {
       .reduce((sum, item) => sum + item.amount, 0);
 
     return totalIncome - totalExpenses;
+  },
+
+  checkRecurringBudgets: async (userId: string) => {
+    const data = await DataService.load(userId);
+    const today = new Date();
+    const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+    // Check if budget plan exists for current month
+    const existingPlan = data.budgetPlans?.find(p => p.month === currentMonthStr);
+
+    if (!existingPlan) {
+      // Find latest previous plan
+      const sortedPlans = [...(data.budgetPlans || [])].sort((a, b) => b.month.localeCompare(a.month));
+      const latestPlan = sortedPlans[0];
+
+      if (latestPlan && latestPlan.budgetItems) {
+        const recurringItems = latestPlan.budgetItems.filter(item => item.recurring);
+
+        if (recurringItems.length > 0) {
+          const newPlan: import('../types').BudgetPlan = {
+            month: currentMonthStr,
+            // If we have recurring items, we likely want to keep the same overall budget ceiling, 
+            // or at least a baseline. For now, let's carry over the total limit to be helpful.
+            totalLimit: latestPlan.totalLimit,
+            budgetItems: recurringItems.map(item => ({
+              ...item,
+              id: Math.random().toString(36).substr(2, 9) // New ID for new month instance
+            }))
+          };
+
+          data.budgetPlans = [...(data.budgetPlans || []), newPlan];
+          await DataService.save(data);
+          console.log('Rolled over recurring budget items to', currentMonthStr);
+        }
+      }
+    }
   }
 };
