@@ -19,10 +19,7 @@ export interface FinancialItem {
   icon?: string;
 }
 
-export interface EMI {
-  id: string;
-  userId: string;
-  name: string;
+
 export interface Milestone {
   id: string;
   userId: string;

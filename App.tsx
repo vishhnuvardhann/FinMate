@@ -6,7 +6,7 @@ import Budget from './pages/Budget';
 import BudgetPlanner from './pages/BudgetPlanner';
 import BalanceSheet from './pages/BalanceSheet';
 import Forecasting from './pages/Forecasting';
-import Forecasting from './pages/Forecasting';
+
 import Reports from './pages/ReportsV2';
 import Login from './pages/Login';
 import { AuthService } from './services/authService';
