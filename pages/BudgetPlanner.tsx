@@ -148,6 +148,10 @@ const BudgetPlanner: React.FC = () => {
     const currentMonthExpenses = data.expenses.filter(e => e.date.startsWith(currentMonthStr));
     const totalActualExpense = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
 
+    // Calculate Income
+    const currentMonthIncome = data.income.filter(i => i.date.startsWith(currentMonthStr));
+    const totalActualIncome = currentMonthIncome.reduce((sum, i) => sum + i.amount, 0);
+
     // Group items by Category for display logic
     // 1. Get all unique categories from expenses AND budget items
     // Requirement: Show categories explicitly in budget OR naturally occurring in this month's expenses (Auto-Add)
@@ -227,255 +231,282 @@ const BudgetPlanner: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-3">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-300">Spent so far</span>
-                                <span className="text-white font-medium">{formatCurrency(totalActualExpense)}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-300">Remaining</span>
-                                <span className={`font-medium ${calculatedTotalBudget - totalActualExpense < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                                    {formatCurrency(calculatedTotalBudget - totalActualExpense)}
-                                </span>
-                            </div>
+                        {calculatedTotalBudget}
+                    </div>
+            </div>
+        </div>
 
-                            {/* Progress Bar */}
-                            <div className="h-4 bg-gray-700 rounded-full overflow-hidden mt-2 relative">
+                        {/* Income Warning */ }
+    {
+        totalActualIncome > 0 && calculatedTotalBudget > totalActualIncome && (
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3">
+                <i className="ri-alert-line text-amber-500 mt-0.5"></i>
+                <div>
+                    <h4 className="text-sm font-semibold text-amber-500">Exceeds Income</h4>
+                    <p className="text-xs text-amber-200/70 mt-0.5">
+                        Your budget of {formatCurrency(calculatedTotalBudget)} is higher than your income of {formatCurrency(totalActualIncome)}.
+                    </p>
+                </div>
+            </div>
+        )
+    }
+
+    <div className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-3">
+        <div className="flex justify-between text-sm">
+            <span className="text-gray-300">Monthly Expenses</span>
+            <span className="text-white font-medium">{formatCurrency(totalActualExpense)}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+            <span className="text-gray-300">Monthly Income</span>
+            <span className="text-emerald-400 font-medium">{formatCurrency(totalActualIncome)}</span>
+        </div>
+        <div className="h-px bg-white/10 my-1"></div>
+        <div className="flex justify-between text-sm">
+            <span className="text-gray-300">Remaining</span>
+            <span className={`font-medium ${calculatedTotalBudget - totalActualExpense < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                {formatCurrency(calculatedTotalBudget - totalActualExpense)}
+            </span>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="h-4 bg-gray-700 rounded-full overflow-hidden mt-2 relative">
+            <div
+                className={`h-full transition-all duration-500 ${totalActualExpense > calculatedTotalBudget ? 'bg-red-500' : 'bg-emerald-500'}`}
+                style={{ width: `${Math.min((totalActualExpense / (calculatedTotalBudget || 1)) * 100, 100)}%` }}
+            ></div>
+        </div>
+        <p className="text-xs text-center text-gray-400 mt-1">
+            {calculatedTotalBudget > 0 ? `${Math.round((totalActualExpense / calculatedTotalBudget) * 100)}% of budget used` : 'No budget set'}
+        </p>
+    </div>
+
+    {/* Status Indicator */ }
+    {
+        calculatedTotalBudget > 0 && (
+            <div className={`p-4 rounded-xl border flex items-center gap-3 ${totalActualExpense > calculatedTotalBudget ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
+                <i className={`text-2xl ${totalActualExpense > calculatedTotalBudget ? 'ri-alarm-warning-line text-red-400' : 'ri-checkbox-circle-line text-emerald-400'}`}></i>
+                <div>
+                    <h4 className={`font-bold ${totalActualExpense > calculatedTotalBudget ? 'text-red-400' : 'text-emerald-400'}`}>
+                        {totalActualExpense > calculatedTotalBudget ? 'Budget Exceeded' : 'On Track'}
+                    </h4>
+                    <p className="text-xs text-gray-400">
+                        {totalActualExpense > calculatedTotalBudget
+                            ? `You have exceeded your budget by ${formatCurrency(totalActualExpense - calculatedTotalBudget)}`
+                            : `You show savings of ${formatCurrency(calculatedTotalBudget - totalActualExpense)}`
+                        }
+                    </p>
+                </div>
+            </div>
+        )
+    }
+
+                    </div >
+                </Card >
+
+    <Card title="Category Breakdown" className="h-fit">
+
+        {/* Add Category Form */}
+        <form onSubmit={handleManualAddCategory} className="mb-6 flex flex-col gap-2">
+            <div className="flex gap-2">
+                <div className="flex-1">
+                    <input
+                        value={newCategory}
+                        onChange={e => setNewCategory(e.target.value)}
+                        placeholder="Category Name (e.g. Food)"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    />
+                </div>
+                <div className="w-24">
+                    <input
+                        type="number"
+                        value={newCategoryLimit}
+                        onChange={e => setNewCategoryLimit(e.target.value)}
+                        placeholder="Limit"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    />
+                </div>
+                <button type="submit" className="p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition" title="Add Category">
+                    <i className="ri-add-line"></i>
+                </button>
+            </div>
+            {/* New Description Input & Recurring Toggle */}
+            <div className="flex gap-2 items-center">
+                <div className="flex-1">
+                    <input
+                        value={newCategoryDesc}
+                        onChange={e => setNewCategoryDesc(e.target.value)}
+                        placeholder="Description (e.g. Groceries)"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-indigo-500"
+                    />
+                </div>
+                <div
+                    onClick={() => setNewCategoryRecurring(!newCategoryRecurring)}
+                    className={`cursor-pointer px-3 py-1.5 rounded-lg border text-xs flex items-center gap-1 select-none transition ${newCategoryRecurring ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300' : 'bg-white/5 border-white/10 text-gray-400'}`}
+                >
+                    <i className={`ri-refresh-line ${newCategoryRecurring ? 'animate-spin-slow' : ''}`}></i>
+                    <span>Recurring</span>
+                </div>
+            </div>
+        </form>
+
+        <div className="flex justify-between items-center mb-4">
+            <p className="text-xs text-gray-400">Manage category limits</p>
+            <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">Sort by:</span>
+                <select
+                    value={sortOption}
+                    onChange={(e) => setSortOption(e.target.value as any)}
+                    className="bg-white/5 border border-white/10 rounded text-xs px-2 py-1 text-gray-300 focus:outline-none hover:bg-white/10"
+                >
+                    <option className="bg-slate-800" value="name">Name</option>
+                    <option className="bg-slate-800" value="limit">Limit (High)</option>
+                    <option className="bg-slate-800" value="spent">Spent (High)</option>
+                    <option className="bg-slate-800" value="status">Over Budget</option>
+                </select>
+            </div>
+        </div>
+
+        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+            {sortedCategoryData.length === 0 && <p className="text-sm text-gray-500 italic">No expense categories found. Add expenses to see them here.</p>}
+
+            {sortedCategoryData.map(({ cat, items, totalLimit, spent, isOver, hasBudget }) => {
+                // Calculate remaining or exceeded amount
+                const remaining = totalLimit - spent;
+
+                // If unbudgeted, diff is just the spent amount
+                const diffAmount = totalLimit > 0 ? Math.abs(remaining) : spent;
+
+                return (
+                    <div key={cat} className={`rounded-lg bg-white/5 border overflow-hidden transition ${!hasBudget ? 'border-amber-500/30' : 'border-white/5'}`}>
+                        {/* Category Header */}
+                        <div className="p-3 bg-white/5 flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <span className="font-medium text-white">{cat}</span>
+                                {!hasBudget && <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded uppercase tracking-wider font-bold">New</span>}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {/* Show status if budgeted OR if money is spent */}
+                                {(totalLimit > 0 || spent > 0) && (
+                                    <span className={`text-xs px-2 py-0.5 rounded ${isOver ? 'bg-red-500/20 text-red-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
+                                        {totalLimit > 0
+                                            ? (isOver ? `Exceeded: ${formatCurrency(diffAmount)}` : `Remaining: ${formatCurrency(remaining)}`)
+                                            : `Unbudgeted: ${formatCurrency(spent)}`
+                                        }
+                                    </span>
+                                )}
+                                {hasBudget && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat as string); }}
+                                        className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-red-400 transition"
+                                        title="Delete Category"
+                                    >
+                                        <i className="ri-delete-bin-line"></i>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Combined Progress */}
+                        <div className="px-3 pb-3 pt-2">
+                            <div className="flex justify-between text-xs text-gray-400 mb-1">
+                                <span>Spent: {formatCurrency(spent)}</span>
+                                <span>Limit: {formatCurrency(totalLimit)}</span>
+                            </div>
+                            <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
                                 <div
-                                    className={`h-full transition-all duration-500 ${totalActualExpense > calculatedTotalBudget ? 'bg-red-500' : 'bg-emerald-500'}`}
-                                    style={{ width: `${Math.min((totalActualExpense / (calculatedTotalBudget || 1)) * 100, 100)}%` }}
+                                    className={`h-full ${isOver ? 'bg-red-500' : (totalLimit > 0 ? 'bg-indigo-500' : 'bg-transparent')}`}
+                                    style={{ width: totalLimit > 0 ? `${Math.min((spent / totalLimit) * 100, 100)}%` : (spent > 0 ? '100%' : '0%') }}
                                 ></div>
                             </div>
-                            <p className="text-xs text-center text-gray-400 mt-1">
-                                {calculatedTotalBudget > 0 ? `${Math.round((totalActualExpense / calculatedTotalBudget) * 100)}% of budget used` : 'No budget set'}
-                            </p>
                         </div>
 
-                        {/* Status Indicator */}
-                        {calculatedTotalBudget > 0 && (
-                            <div className={`p-4 rounded-xl border flex items-center gap-3 ${totalActualExpense > calculatedTotalBudget ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
-                                <i className={`text-2xl ${totalActualExpense > calculatedTotalBudget ? 'ri-alarm-warning-line text-red-400' : 'ri-checkbox-circle-line text-emerald-400'}`}></i>
-                                <div>
-                                    <h4 className={`font-bold ${totalActualExpense > calculatedTotalBudget ? 'text-red-400' : 'text-emerald-400'}`}>
-                                        {totalActualExpense > calculatedTotalBudget ? 'Budget Exceeded' : 'On Track'}
-                                    </h4>
-                                    <p className="text-xs text-gray-400">
-                                        {totalActualExpense > calculatedTotalBudget
-                                            ? `You have exceeded your budget by ${formatCurrency(totalActualExpense - calculatedTotalBudget)}`
-                                            : `You show savings of ${formatCurrency(calculatedTotalBudget - totalActualExpense)}`
-                                        }
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                    </div>
-                </Card>
-
-                <Card title="Category Breakdown" className="h-fit">
-
-                    {/* Add Category Form */}
-                    <form onSubmit={handleManualAddCategory} className="mb-6 flex flex-col gap-2">
-                        <div className="flex gap-2">
-                            <div className="flex-1">
-                                <input
-                                    value={newCategory}
-                                    onChange={e => setNewCategory(e.target.value)}
-                                    placeholder="Category Name (e.g. Food)"
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                                />
-                            </div>
-                            <div className="w-24">
-                                <input
-                                    type="number"
-                                    value={newCategoryLimit}
-                                    onChange={e => setNewCategoryLimit(e.target.value)}
-                                    placeholder="Limit"
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                                />
-                            </div>
-                            <button type="submit" className="p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition" title="Add Category">
-                                <i className="ri-add-line"></i>
-                            </button>
-                        </div>
-                        {/* New Description Input & Recurring Toggle */}
-                        <div className="flex gap-2 items-center">
-                            <div className="flex-1">
-                                <input
-                                    value={newCategoryDesc}
-                                    onChange={e => setNewCategoryDesc(e.target.value)}
-                                    placeholder="Description (e.g. Groceries)"
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-indigo-500"
-                                />
-                            </div>
-                            <div
-                                onClick={() => setNewCategoryRecurring(!newCategoryRecurring)}
-                                className={`cursor-pointer px-3 py-1.5 rounded-lg border text-xs flex items-center gap-1 select-none transition ${newCategoryRecurring ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300' : 'bg-white/5 border-white/10 text-gray-400'}`}
-                            >
-                                <i className={`ri-refresh-line ${newCategoryRecurring ? 'animate-spin-slow' : ''}`}></i>
-                                <span>Recurring</span>
-                            </div>
-                        </div>
-                    </form>
-
-                    <div className="flex justify-between items-center mb-4">
-                        <p className="text-xs text-gray-400">Manage category limits</p>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500">Sort by:</span>
-                            <select
-                                value={sortOption}
-                                onChange={(e) => setSortOption(e.target.value as any)}
-                                className="bg-white/5 border border-white/10 rounded text-xs px-2 py-1 text-gray-300 focus:outline-none hover:bg-white/10"
-                            >
-                                <option className="bg-slate-800" value="name">Name</option>
-                                <option className="bg-slate-800" value="limit">Limit (High)</option>
-                                <option className="bg-slate-800" value="spent">Spent (High)</option>
-                                <option className="bg-slate-800" value="status">Over Budget</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                        {sortedCategoryData.length === 0 && <p className="text-sm text-gray-500 italic">No expense categories found. Add expenses to see them here.</p>}
-
-                        {sortedCategoryData.map(({ cat, items, totalLimit, spent, isOver, hasBudget }) => {
-                            // Calculate remaining or exceeded amount
-                            const remaining = totalLimit - spent;
-
-                            // If unbudgeted, diff is just the spent amount
-                            const diffAmount = totalLimit > 0 ? Math.abs(remaining) : spent;
-
-                            return (
-                                <div key={cat} className={`rounded-lg bg-white/5 border overflow-hidden transition ${!hasBudget ? 'border-amber-500/30' : 'border-white/5'}`}>
-                                    {/* Category Header */}
-                                    <div className="p-3 bg-white/5 flex justify-between items-center">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-medium text-white">{cat}</span>
-                                            {!hasBudget && <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded uppercase tracking-wider font-bold">New</span>}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            {/* Show status if budgeted OR if money is spent */}
-                                            {(totalLimit > 0 || spent > 0) && (
-                                                <span className={`text-xs px-2 py-0.5 rounded ${isOver ? 'bg-red-500/20 text-red-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
-                                                    {totalLimit > 0
-                                                        ? (isOver ? `Exceeded: ${formatCurrency(diffAmount)}` : `Remaining: ${formatCurrency(remaining)}`)
-                                                        : `Unbudgeted: ${formatCurrency(spent)}`
-                                                    }
-                                                </span>
+                        {/* Detailed Items */}
+                        {items.length > 0 && (
+                            <div className="border-t border-white/5">
+                                {items.map((item: any) => (
+                                    <div key={item.id} className="flex justify-between items-center p-3 hover:bg-white/5 text-sm">
+                                        <span className="text-gray-300 pl-4 border-l-2 border-indigo-500/30 flex items-center gap-2">
+                                            {item.description || (item.isVirtual ? 'Set a limit to add to budget' : 'General')}
+                                            {item.recurring && (
+                                                <i className="ri-refresh-line text-indigo-400 text-xs" title="Recurring Budget"></i>
                                             )}
-                                            {hasBudget && (
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                value={item.limit || ''}
+                                                onChange={(e) => {
+                                                    if (item.isVirtual) {
+                                                        // Auto-add logic: Create real item on input
+                                                        const val = parseFloat(e.target.value) || 0;
+                                                        const newItem: BudgetItem = {
+                                                            id: Math.random().toString(36).substr(2, 9),
+                                                            category: item.category,
+                                                            limit: val,
+                                                            description: '',
+                                                            recurring: false
+                                                        };
+                                                        const newItems = [...budgetItems, newItem];
+                                                        setBudgetItems(newItems);
+                                                        saveBudget(newItems);
+                                                    } else {
+                                                        handleItemLimitChange(item.id, parseFloat(e.target.value) || 0)
+                                                    }
+                                                }}
+                                                placeholder={item.isVirtual ? "Set Limit" : ""}
+                                                className={`bg-slate-900 border ${item.isVirtual ? 'border-amber-500/50 text-amber-300' : 'border-slate-700 text-indigo-300'} rounded px-2 py-0.5 w-24 text-right focus:border-indigo-500 focus:outline-none text-xs`}
+                                            />
+                                            {!item.isVirtual && (
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat as string); }}
-                                                    className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-red-400 transition"
-                                                    title="Delete Category"
+                                                    onClick={() => handleDeleteItem(item.id)}
+                                                    className="p-1 hover:bg-white/10 rounded text-gray-400 hover:text-red-400 transition"
+                                                    title="Remove Item"
                                                 >
-                                                    <i className="ri-delete-bin-line"></i>
+                                                    <i className="ri-close-line"></i>
                                                 </button>
                                             )}
                                         </div>
                                     </div>
-
-                                    {/* Combined Progress */}
-                                    <div className="px-3 pb-3 pt-2">
-                                        <div className="flex justify-between text-xs text-gray-400 mb-1">
-                                            <span>Spent: {formatCurrency(spent)}</span>
-                                            <span>Limit: {formatCurrency(totalLimit)}</span>
-                                        </div>
-                                        <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                                            <div
-                                                className={`h-full ${isOver ? 'bg-red-500' : (totalLimit > 0 ? 'bg-indigo-500' : 'bg-transparent')}`}
-                                                style={{ width: totalLimit > 0 ? `${Math.min((spent / totalLimit) * 100, 100)}%` : (spent > 0 ? '100%' : '0%') }}
-                                            ></div>
-                                        </div>
-                                    </div>
-
-                                    {/* Detailed Items */}
-                                    {items.length > 0 && (
-                                        <div className="border-t border-white/5">
-                                            {items.map((item: any) => (
-                                                <div key={item.id} className="flex justify-between items-center p-3 hover:bg-white/5 text-sm">
-                                                    <span className="text-gray-300 pl-4 border-l-2 border-indigo-500/30 flex items-center gap-2">
-                                                        {item.description || (item.isVirtual ? 'Set a limit to add to budget' : 'General')}
-                                                        {item.recurring && (
-                                                            <i className="ri-refresh-line text-indigo-400 text-xs" title="Recurring Budget"></i>
-                                                        )}
-                                                    </span>
-                                                    <div className="flex items-center gap-2">
-                                                        <input
-                                                            type="number"
-                                                            value={item.limit || ''}
-                                                            onChange={(e) => {
-                                                                if (item.isVirtual) {
-                                                                    // Auto-add logic: Create real item on input
-                                                                    const val = parseFloat(e.target.value) || 0;
-                                                                    const newItem: BudgetItem = {
-                                                                        id: Math.random().toString(36).substr(2, 9),
-                                                                        category: item.category,
-                                                                        limit: val,
-                                                                        description: '',
-                                                                        recurring: false
-                                                                    };
-                                                                    const newItems = [...budgetItems, newItem];
-                                                                    setBudgetItems(newItems);
-                                                                    saveBudget(newItems);
-                                                                } else {
-                                                                    handleItemLimitChange(item.id, parseFloat(e.target.value) || 0)
-                                                                }
-                                                            }}
-                                                            placeholder={item.isVirtual ? "Set Limit" : ""}
-                                                            className={`bg-slate-900 border ${item.isVirtual ? 'border-amber-500/50 text-amber-300' : 'border-slate-700 text-indigo-300'} rounded px-2 py-0.5 w-24 text-right focus:border-indigo-500 focus:outline-none text-xs`}
-                                                        />
-                                                        {!item.isVirtual && (
-                                                            <button
-                                                                onClick={() => handleDeleteItem(item.id)}
-                                                                className="p-1 hover:bg-white/10 rounded text-gray-400 hover:text-red-400 transition"
-                                                                title="Remove Item"
-                                                            >
-                                                                <i className="ri-close-line"></i>
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                                ))}
+                            </div>
+                        )}
                     </div>
-                </Card>
-            </div>
+                );
+            })}
+        </div>
+    </Card>
+            </div >
 
-            {/* Transactions List */}
-            <Card title="Monthly Transactions">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="border-b border-white/10 text-gray-400 text-sm">
-                                <th className="pb-3 font-medium">Date</th>
-                                <th className="pb-3 font-medium">Description</th>
-                                <th className="pb-3 font-medium">Category</th>
-                                <th className="pb-3 font-medium text-right">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {currentMonthExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(item => (
-                                <tr key={item.id} className="hover:bg-white/5 transition">
-                                    <td className="py-3 text-gray-300 text-sm">{item.date}</td>
-                                    <td className="py-3 text-white font-medium">{item.name}</td>
-                                    <td className="py-3 text-gray-400 text-sm">
-                                        <span className="px-2 py-1 rounded bg-white/5 border border-white/5">{item.subcategory}</span>
-                                    </td>
-                                    <td className="py-3 text-white text-right font-medium">{formatCurrency(item.amount)}</td>
-                                </tr>
-                            ))}
-                            {currentMonthExpenses.length === 0 && (
-                                <tr><td colSpan={4} className="py-8 text-center text-gray-500 italic">No transactions found for this month.</td></tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
+    {/* Transactions List */ }
+    < Card title = "Monthly Transactions" >
+        <div className="overflow-x-auto">
+            <table className="w-full text-left">
+                <thead>
+                    <tr className="border-b border-white/10 text-gray-400 text-sm">
+                        <th className="pb-3 font-medium">Date</th>
+                        <th className="pb-3 font-medium">Description</th>
+                        <th className="pb-3 font-medium">Category</th>
+                        <th className="pb-3 font-medium text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                    {currentMonthExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(item => (
+                        <tr key={item.id} className="hover:bg-white/5 transition">
+                            <td className="py-3 text-gray-300 text-sm">{item.date}</td>
+                            <td className="py-3 text-white font-medium">{item.name}</td>
+                            <td className="py-3 text-gray-400 text-sm">
+                                <span className="px-2 py-1 rounded bg-white/5 border border-white/5">{item.subcategory}</span>
+                            </td>
+                            <td className="py-3 text-white text-right font-medium">{formatCurrency(item.amount)}</td>
+                        </tr>
+                    ))}
+                    {currentMonthExpenses.length === 0 && (
+                        <tr><td colSpan={4} className="py-8 text-center text-gray-500 italic">No transactions found for this month.</td></tr>
+                    )}
+                </tbody>
+            </table>
+        </div>
+            </Card >
 
         </div >
     );

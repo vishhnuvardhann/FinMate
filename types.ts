@@ -23,11 +23,6 @@ export interface EMI {
   id: string;
   userId: string;
   name: string;
-  amount: number;
-  dueDate: number;
-  isPaid: boolean;
-}
-
 export interface Milestone {
   id: string;
   userId: string;
@@ -50,7 +45,6 @@ export interface AppData {
   liabilities: FinancialItem[];
   income: FinancialItem[];
   expenses: FinancialItem[];
-  emis: EMI[];
   milestones: Milestone[];
   budgetPlans: BudgetPlan[];
   forecast: ForecastConfig;

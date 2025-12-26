@@ -10,8 +10,8 @@ const generateDefaultData = (userId: string): AppData => ({
   assets: [],
   liabilities: [],
   income: [],
+  income: [],
   expenses: [],
-  emis: [],
   milestones: [],
   budgetPlans: [],
   forecast: {

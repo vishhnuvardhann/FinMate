@@ -6,7 +6,7 @@ import Budget from './pages/Budget';
 import BudgetPlanner from './pages/BudgetPlanner';
 import BalanceSheet from './pages/BalanceSheet';
 import Forecasting from './pages/Forecasting';
-import EMI from './pages/EMI';
+import Forecasting from './pages/Forecasting';
 import Reports from './pages/ReportsV2';
 import Login from './pages/Login';
 import { AuthService } from './services/authService';
@@ -43,7 +43,7 @@ const App: React.FC = () => {
           <Route path="/budget-planner" element={<BudgetPlanner />} />
           <Route path="/balance" element={<BalanceSheet />} />
           <Route path="/forecasting" element={<Forecasting />} />
-          <Route path="/emis" element={<EMI />} />
+
           <Route path="/reports" element={<Reports />} />
         </Routes>
       </Layout>
