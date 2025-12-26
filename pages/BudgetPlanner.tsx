@@ -119,6 +119,20 @@ const BudgetPlanner: React.FC = () => {
         setNewCategoryRecurring(false);
     };
 
+    const handleDeleteItem = (id: string) => {
+        if (!window.confirm('Are you sure you want to remove this item?')) return;
+        const newItems = budgetItems.filter(item => item.id !== id);
+        setBudgetItems(newItems);
+        saveBudget(monthlyBudget, newItems);
+    };
+
+    const handleDeleteCategory = (category: string) => {
+        if (!window.confirm(`Delete all budget items in category "${category}"?`)) return;
+        const newItems = budgetItems.filter(item => item.category !== category);
+        setBudgetItems(newItems);
+        saveBudget(monthlyBudget, newItems);
+    };
+
     const changeMonth = (offset: number) => {
         const newDate = new Date(currentDate);
         newDate.setMonth(newDate.getMonth() + offset);
@@ -334,6 +348,13 @@ const BudgetPlanner: React.FC = () => {
                                                     }
                                                 </span>
                                             )}
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat as string); }}
+                                                className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-red-400 transition"
+                                                title="Delete Category"
+                                            >
+                                                <i className="ri-delete-bin-line"></i>
+                                            </button>
                                         </div>
                                     </div>
 
@@ -362,12 +383,21 @@ const BudgetPlanner: React.FC = () => {
                                                             <i className="ri-refresh-line text-indigo-400 text-xs" title="Recurring Budget"></i>
                                                         )}
                                                     </span>
-                                                    <input
-                                                        type="number"
-                                                        value={item.limit || ''}
-                                                        onChange={(e) => handleItemLimitChange(item.id, parseFloat(e.target.value) || 0)}
-                                                        className="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 w-24 text-right text-indigo-300 focus:border-indigo-500 focus:outline-none text-xs"
-                                                    />
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="number"
+                                                            value={item.limit || ''}
+                                                            onChange={(e) => handleItemLimitChange(item.id, parseFloat(e.target.value) || 0)}
+                                                            className="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 w-24 text-right text-indigo-300 focus:border-indigo-500 focus:outline-none text-xs"
+                                                        />
+                                                        <button
+                                                            onClick={() => handleDeleteItem(item.id)}
+                                                            className="p-1 hover:bg-white/10 rounded text-gray-400 hover:text-red-400 transition"
+                                                            title="Remove Item"
+                                                        >
+                                                            <i className="ri-close-line"></i>
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>

@@ -35,8 +35,8 @@ export const DataService = {
 
     // Check for recurring transactions upon init
     await DataService.checkRecurringTransactions(userId);
-    // Check for recurring budget plans
-    await DataService.checkRecurringBudgets(userId);
+    // Check for recurring budget plans - DISABLED per user request for manual-only monthly entry
+    // await DataService.checkRecurringBudgets(userId);
   },
 
   load: async (userId: string): Promise<AppData> => {
