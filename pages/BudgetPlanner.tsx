@@ -150,23 +150,33 @@ const BudgetPlanner: React.FC = () => {
 
     // Group items by Category for display logic
     // 1. Get all unique categories from expenses AND budget items
-    // FIX: Only show categories that are EXPLICITLY in the budget items.
-    // If a category has expenses but no budget items, it will not appear in the "Planner" breakdown (matches user manual preference).
-    // const expenseCategories = new Set(currentMonthExpenses.map(e => e.subcategory).filter((c): c is string => !!c));
+    // Requirement: Show categories explicitly in budget OR naturally occurring in this month's expenses (Auto-Add)
+    const expenseCategories = new Set(currentMonthExpenses.map(e => e.subcategory).filter((c): c is string => !!c));
     const budgetCategories = new Set(budgetItems.map(i => i.category));
-    const allCategories = Array.from(budgetCategories);
+    const allCategories = Array.from(new Set([...Array.from(expenseCategories), ...Array.from(budgetCategories)]));
 
     // 2. Create aggregated data structure
     const categoryData = allCategories.map(cat => {
         const items = budgetItems.filter(i => i.category === cat);
+        // If no budget items exist but we have expenses, create a "virtual" unbudgeted item
+        const hasBudget = items.length > 0;
+        const displayItems = hasBudget ? items : [{
+            id: `virtual-${cat}`,
+            category: cat,
+            limit: 0,
+            description: 'Unbudgeted Spending',
+            recurring: false,
+            isVirtual: true // Flag to identify unbudgeted
+        }];
+
         const totalLimit = items.reduce((sum, i) => sum + i.limit, 0);
         const spent = currentMonthExpenses.filter(e => e.subcategory === cat).reduce((sum, e) => sum + e.amount, 0);
-        const isOver = totalLimit > 0 && spent > totalLimit;
+        const isOver = totalLimit > 0 ? spent > totalLimit : spent > 0; // If limit 0, any spend is "over" technically, or just unbudgeted
 
         // Calculate status score for sorting
-        const statusScore = totalLimit > 0 ? spent / totalLimit : 0;
+        const statusScore = totalLimit > 0 ? spent / totalLimit : (spent > 0 ? 999 : 0); // Put unbudgeted spend at top if sorting by status
 
-        return { cat, items, totalLimit, spent, isOver, statusScore };
+        return { cat, items: displayItems, totalLimit, spent, isOver, statusScore, hasBudget };
     });
 
     // 3. Sort
@@ -328,34 +338,40 @@ const BudgetPlanner: React.FC = () => {
                     <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                         {sortedCategoryData.length === 0 && <p className="text-sm text-gray-500 italic">No expense categories found. Add expenses to see them here.</p>}
 
-                        {sortedCategoryData.map(({ cat, items, totalLimit, spent, isOver }) => {
+                        {sortedCategoryData.map(({ cat, items, totalLimit, spent, isOver, hasBudget }) => {
                             // Calculate remaining or exceeded amount
                             const remaining = totalLimit - spent;
-                            const diffAmount = Math.abs(remaining);
+
+                            // If unbudgeted, diff is just the spent amount
+                            const diffAmount = totalLimit > 0 ? Math.abs(remaining) : spent;
 
                             return (
-                                <div key={cat} className="rounded-lg bg-white/5 border border-white/5 overflow-hidden transition">
+                                <div key={cat} className={`rounded-lg bg-white/5 border overflow-hidden transition ${!hasBudget ? 'border-amber-500/30' : 'border-white/5'}`}>
                                     {/* Category Header */}
                                     <div className="p-3 bg-white/5 flex justify-between items-center">
-                                        <div>
+                                        <div className="flex items-center gap-2">
                                             <span className="font-medium text-white">{cat}</span>
+                                            {!hasBudget && <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded uppercase tracking-wider font-bold">New</span>}
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            {totalLimit > 0 && (
+                                            {/* Show status if budgeted OR if money is spent */}
+                                            {(totalLimit > 0 || spent > 0) && (
                                                 <span className={`text-xs px-2 py-0.5 rounded ${isOver ? 'bg-red-500/20 text-red-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
-                                                    {isOver
-                                                        ? `Exceeded: ${formatCurrency(diffAmount)}`
-                                                        : `Remaining: ${formatCurrency(remaining)}`
+                                                    {totalLimit > 0
+                                                        ? (isOver ? `Exceeded: ${formatCurrency(diffAmount)}` : `Remaining: ${formatCurrency(remaining)}`)
+                                                        : `Unbudgeted: ${formatCurrency(spent)}`
                                                     }
                                                 </span>
                                             )}
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat as string); }}
-                                                className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-red-400 transition"
-                                                title="Delete Category"
-                                            >
-                                                <i className="ri-delete-bin-line"></i>
-                                            </button>
+                                            {hasBudget && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat as string); }}
+                                                    className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-red-400 transition"
+                                                    title="Delete Category"
+                                                >
+                                                    <i className="ri-delete-bin-line"></i>
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
 
@@ -367,8 +383,8 @@ const BudgetPlanner: React.FC = () => {
                                         </div>
                                         <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
                                             <div
-                                                className={`h-full ${isOver ? 'bg-red-500' : 'bg-indigo-500'}`}
-                                                style={{ width: `${Math.min((spent / (totalLimit || 1)) * 100, 100)}%` }}
+                                                className={`h-full ${isOver ? 'bg-red-500' : (totalLimit > 0 ? 'bg-indigo-500' : 'bg-transparent')}`}
+                                                style={{ width: totalLimit > 0 ? `${Math.min((spent / totalLimit) * 100, 100)}%` : (spent > 0 ? '100%' : '0%') }}
                                             ></div>
                                         </div>
                                     </div>
@@ -376,10 +392,10 @@ const BudgetPlanner: React.FC = () => {
                                     {/* Detailed Items */}
                                     {items.length > 0 && (
                                         <div className="border-t border-white/5">
-                                            {items.map(item => (
+                                            {items.map((item: any) => (
                                                 <div key={item.id} className="flex justify-between items-center p-3 hover:bg-white/5 text-sm">
                                                     <span className="text-gray-300 pl-4 border-l-2 border-indigo-500/30 flex items-center gap-2">
-                                                        {item.description || 'General'}
+                                                        {item.description || (item.isVirtual ? 'Set a limit to add to budget' : 'General')}
                                                         {item.recurring && (
                                                             <i className="ri-refresh-line text-indigo-400 text-xs" title="Recurring Budget"></i>
                                                         )}
@@ -388,16 +404,36 @@ const BudgetPlanner: React.FC = () => {
                                                         <input
                                                             type="number"
                                                             value={item.limit || ''}
-                                                            onChange={(e) => handleItemLimitChange(item.id, parseFloat(e.target.value) || 0)}
-                                                            className="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 w-24 text-right text-indigo-300 focus:border-indigo-500 focus:outline-none text-xs"
+                                                            onChange={(e) => {
+                                                                if (item.isVirtual) {
+                                                                    // Auto-add logic: Create real item on input
+                                                                    const val = parseFloat(e.target.value) || 0;
+                                                                    const newItem: BudgetItem = {
+                                                                        id: Math.random().toString(36).substr(2, 9),
+                                                                        category: item.category,
+                                                                        limit: val,
+                                                                        description: '',
+                                                                        recurring: false
+                                                                    };
+                                                                    const newItems = [...budgetItems, newItem];
+                                                                    setBudgetItems(newItems);
+                                                                    saveBudget(newItems);
+                                                                } else {
+                                                                    handleItemLimitChange(item.id, parseFloat(e.target.value) || 0)
+                                                                }
+                                                            }}
+                                                            placeholder={item.isVirtual ? "Set Limit" : ""}
+                                                            className={`bg-slate-900 border ${item.isVirtual ? 'border-amber-500/50 text-amber-300' : 'border-slate-700 text-indigo-300'} rounded px-2 py-0.5 w-24 text-right focus:border-indigo-500 focus:outline-none text-xs`}
                                                         />
-                                                        <button
-                                                            onClick={() => handleDeleteItem(item.id)}
-                                                            className="p-1 hover:bg-white/10 rounded text-gray-400 hover:text-red-400 transition"
-                                                            title="Remove Item"
-                                                        >
-                                                            <i className="ri-close-line"></i>
-                                                        </button>
+                                                        {!item.isVirtual && (
+                                                            <button
+                                                                onClick={() => handleDeleteItem(item.id)}
+                                                                className="p-1 hover:bg-white/10 rounded text-gray-400 hover:text-red-400 transition"
+                                                                title="Remove Item"
+                                                            >
+                                                                <i className="ri-close-line"></i>
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
