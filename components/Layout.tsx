@@ -31,7 +31,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { path: '/budget', label: 'Transactions', icon: 'ri-wallet-3-line' },
     { path: '/balance', label: 'Net Worth Sheet', icon: 'ri-scales-3-line' },
     { path: '/forecasting', label: 'Forecasting', icon: 'ri-line-chart-line' },
-    { path: '/forecasting', label: 'Forecasting', icon: 'ri-line-chart-line' },
     { path: '/reports', label: 'Reports', icon: 'ri-file-list-3-line' },
   ];
 
