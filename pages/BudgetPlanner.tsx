@@ -61,10 +61,13 @@ const BudgetPlanner: React.FC = () => {
         }
     }, [data, currentDate]);
 
-    const saveBudget = async (newTotal: number, newItems: BudgetItem[]) => {
+    const saveBudget = async (newItems: BudgetItem[]) => {
         if (!data) return;
 
         const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+        // FIX: Calculate total automatically from items
+        const newTotal = newItems.reduce((sum, item) => sum + (item.limit || 0), 0);
+
         const newPlan: BudgetPlan = {
             month: currentMonthStr,
             totalLimit: newTotal,
@@ -85,16 +88,14 @@ const BudgetPlanner: React.FC = () => {
         await DataService.save(updatedData);
     };
 
-    const handleTotalBudgetChange = (amount: number) => {
-        setMonthlyBudget(amount);
-        saveBudget(amount, budgetItems);
-    };
+    // Derived State
+    const calculatedTotalBudget = budgetItems.reduce((sum, item) => sum + (item.limit || 0), 0);
 
     // Update a specific item's limit
     const handleItemLimitChange = (id: string, amount: number) => {
         const newItems = budgetItems.map(item => item.id === id ? { ...item, limit: amount } : item);
         setBudgetItems(newItems);
-        saveBudget(monthlyBudget, newItems);
+        saveBudget(newItems);
     };
 
     const handleManualAddCategory = (e: React.FormEvent) => {
@@ -111,7 +112,7 @@ const BudgetPlanner: React.FC = () => {
 
         const newItems = [...budgetItems, newItem];
         setBudgetItems(newItems);
-        saveBudget(monthlyBudget, newItems);
+        saveBudget(newItems);
 
         setNewCategory('');
         setNewCategoryLimit('');
@@ -123,14 +124,14 @@ const BudgetPlanner: React.FC = () => {
         if (!window.confirm('Are you sure you want to remove this item?')) return;
         const newItems = budgetItems.filter(item => item.id !== id);
         setBudgetItems(newItems);
-        saveBudget(monthlyBudget, newItems);
+        saveBudget(newItems);
     };
 
     const handleDeleteCategory = (category: string) => {
         if (!window.confirm(`Delete all budget items in category "${category}"?`)) return;
         const newItems = budgetItems.filter(item => item.category !== category);
         setBudgetItems(newItems);
-        saveBudget(monthlyBudget, newItems);
+        saveBudget(newItems);
     };
 
     const changeMonth = (offset: number) => {
@@ -204,16 +205,14 @@ const BudgetPlanner: React.FC = () => {
                 <Card title="Monthly Overview" className="h-fit">
                     <div className="space-y-6">
                         <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-2">Total Monthly Budget</label>
+                            <label className="block text-sm font-medium text-gray-400 mb-2">Total Monthly Budget (Auto-calculated)</label>
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">₹</span>
-                                <input
-                                    type="number"
-                                    value={monthlyBudget || ''}
-                                    onChange={(e) => handleTotalBudgetChange(parseFloat(e.target.value) || 0)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-4 py-3 text-xl font-bold text-white focus:outline-none focus:border-indigo-500 transition"
-                                    placeholder="Set your limit..."
-                                />
+                                <div
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-4 py-3 text-xl font-bold text-white"
+                                >
+                                    {calculatedTotalBudget}
+                                </div>
                             </div>
                         </div>
 
@@ -224,35 +223,35 @@ const BudgetPlanner: React.FC = () => {
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-300">Remaining</span>
-                                <span className={`font-medium ${monthlyBudget - totalActualExpense < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                                    {formatCurrency(monthlyBudget - totalActualExpense)}
+                                <span className={`font-medium ${calculatedTotalBudget - totalActualExpense < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                                    {formatCurrency(calculatedTotalBudget - totalActualExpense)}
                                 </span>
                             </div>
 
                             {/* Progress Bar */}
                             <div className="h-4 bg-gray-700 rounded-full overflow-hidden mt-2 relative">
                                 <div
-                                    className={`h-full transition-all duration-500 ${totalActualExpense > monthlyBudget ? 'bg-red-500' : 'bg-emerald-500'}`}
-                                    style={{ width: `${Math.min((totalActualExpense / (monthlyBudget || 1)) * 100, 100)}%` }}
+                                    className={`h-full transition-all duration-500 ${totalActualExpense > calculatedTotalBudget ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                    style={{ width: `${Math.min((totalActualExpense / (calculatedTotalBudget || 1)) * 100, 100)}%` }}
                                 ></div>
                             </div>
                             <p className="text-xs text-center text-gray-400 mt-1">
-                                {monthlyBudget > 0 ? `${Math.round((totalActualExpense / monthlyBudget) * 100)}% of budget used` : 'No budget set'}
+                                {calculatedTotalBudget > 0 ? `${Math.round((totalActualExpense / calculatedTotalBudget) * 100)}% of budget used` : 'No budget set'}
                             </p>
                         </div>
 
                         {/* Status Indicator */}
-                        {monthlyBudget > 0 && (
-                            <div className={`p-4 rounded-xl border flex items-center gap-3 ${totalActualExpense > monthlyBudget ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
-                                <i className={`text-2xl ${totalActualExpense > monthlyBudget ? 'ri-alarm-warning-line text-red-400' : 'ri-checkbox-circle-line text-emerald-400'}`}></i>
+                        {calculatedTotalBudget > 0 && (
+                            <div className={`p-4 rounded-xl border flex items-center gap-3 ${totalActualExpense > calculatedTotalBudget ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
+                                <i className={`text-2xl ${totalActualExpense > calculatedTotalBudget ? 'ri-alarm-warning-line text-red-400' : 'ri-checkbox-circle-line text-emerald-400'}`}></i>
                                 <div>
-                                    <h4 className={`font-bold ${totalActualExpense > monthlyBudget ? 'text-red-400' : 'text-emerald-400'}`}>
-                                        {totalActualExpense > monthlyBudget ? 'Budget Exceeded' : 'On Track'}
+                                    <h4 className={`font-bold ${totalActualExpense > calculatedTotalBudget ? 'text-red-400' : 'text-emerald-400'}`}>
+                                        {totalActualExpense > calculatedTotalBudget ? 'Budget Exceeded' : 'On Track'}
                                     </h4>
                                     <p className="text-xs text-gray-400">
-                                        {totalActualExpense > monthlyBudget
-                                            ? `You have exceeded your budget by ${formatCurrency(totalActualExpense - monthlyBudget)}`
-                                            : `You show savings of ${formatCurrency(monthlyBudget - totalActualExpense)}`
+                                        {totalActualExpense > calculatedTotalBudget
+                                            ? `You have exceeded your budget by ${formatCurrency(totalActualExpense - calculatedTotalBudget)}`
+                                            : `You show savings of ${formatCurrency(calculatedTotalBudget - totalActualExpense)}`
                                         }
                                     </p>
                                 </div>
