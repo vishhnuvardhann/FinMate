@@ -150,10 +150,11 @@ const BudgetPlanner: React.FC = () => {
 
     // Group items by Category for display logic
     // 1. Get all unique categories from expenses AND budget items
-    // FIX: Only show categories relevant to CURRENT MONTH (either has a budget item or an actual expense)
-    const expenseCategories = new Set(currentMonthExpenses.map(e => e.subcategory).filter((c): c is string => !!c));
+    // FIX: Only show categories that are EXPLICITLY in the budget items.
+    // If a category has expenses but no budget items, it will not appear in the "Planner" breakdown (matches user manual preference).
+    // const expenseCategories = new Set(currentMonthExpenses.map(e => e.subcategory).filter((c): c is string => !!c));
     const budgetCategories = new Set(budgetItems.map(i => i.category));
-    const allCategories = Array.from(new Set([...Array.from(expenseCategories), ...Array.from(budgetCategories)]));
+    const allCategories = Array.from(budgetCategories);
 
     // 2. Create aggregated data structure
     const categoryData = allCategories.map(cat => {
